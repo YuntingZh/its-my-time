@@ -43,7 +43,11 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
 
     return hour * 60 + minutes; // Return total minutes from midnight
   };
-
+   // Convert the Date to Local Time Before Displaying
+  const formatDateToLocalString = (dateStr: string) => {
+    const date = new Date(dateStr + "T00:00:00"); // Force local timezone
+    return date.toDateString();
+  };
   // Sort entries by start time (now correctly handling AM/PM)
   const sortedEntries = [...filteredEntries].sort((a, b) => {
     return convertToMinutes(a.startTime) - convertToMinutes(b.startTime);
@@ -68,7 +72,7 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
         />
       </div>
 
-      <h3>📊 Detailed Timeline for {new Date(selectedDate).toDateString()}</h3>
+      <h3>📊 Detailed Timeline for {formatDateToLocalString(selectedDate)}</h3>
       <div style={{ position: "relative", borderLeft: "4px solid #ddd", paddingLeft: "20px", height: timelineHeight + "px" }}>
         {/* Render Hourly Slots */}
         {Array.from({ length: 24 }).map((_, hour) => (

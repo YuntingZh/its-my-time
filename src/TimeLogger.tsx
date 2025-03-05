@@ -78,8 +78,8 @@ const TimeLogger: React.FC = () => {
       await updateDoc(doc(db, "time_entries", updatedEntry.id), {
         startTime: updatedEntry.startTime,
         endTime: updatedEntry.endTime,
-        // activity: updatedEntry.activity,
-        lable: updatedEntry.label,
+        activity: updatedEntry.activity,
+        label: updatedEntry.label,
       });
 
       setTimeEntries((prev) =>
