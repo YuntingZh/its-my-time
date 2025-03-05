@@ -3,6 +3,9 @@ import { TimeEntry } from "../types";
 import TimeEntryComponent from "./TimeEntry";
 import { labelColors } from "../colors"; // Adjust path if necessary
 
+const gapWidth = 10; 
+const baseLeft = 100; 
+
 interface TimelineProps {
   entries: TimeEntry[];
   onDelete: (id: string) => void;
@@ -61,49 +64,68 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
         ))}
 
         {/* Render Entries with Precise Scaling */}
-        {sortedEntries.map((entry, index) => {
-          const startTotalMins = convertToMinutes(entry.startTime);
 
-          // Determine end time dynamically if missing
-          let endTime = entry.endTime;
-          if (!endTime) {
-            const nextEntry = sortedEntries[index + 1];
-            endTime = nextEntry ? nextEntry.startTime : "11:59 PM";
-          }
 
-          const endTotalMins = convertToMinutes(endTime);
-          const durationMins = endTotalMins - startTotalMins;
+{sortedEntries.map((entry, index) => {
 
-          return (
-            <div key={entry.id}>
-              {/* Transparent Duration Block (Stays on Timeline) */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: startTotalMins * minuteHeight, // Position on the timeline
-                  left: "0px", // Align with timeline
-                  height: durationMins * minuteHeight + "px", // Duration length
-                  width: "60px", // Narrower for better visibility
-                  backgroundColor: labelColors[entry.label] || "#9E9E9E", // Dynamically assign color
-                  opacity: 0.3, // Semi-transparent to show overlaps
-                  borderRadius: "5px",
-                }}
-              />
-          
-              {/* Floating Time Entry Box (Separate from Timeline) */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: startTotalMins * minuteHeight, // Align with start time
-                  left: "100px", // Move it to the right of the timeline
-                  width: "220px",
-                }}
-              >
-                <TimeEntryComponent entry={entry} onDelete={onDelete} onEdit={onEdit} />
-              </div>
-            </div>
-          );
-        })}
+  const startTotalMins = convertToMinutes(entry.startTime);
+
+  let endTime = entry.endTime;
+  if (!endTime) {
+    const nextEntry = sortedEntries[index + 1];
+    endTime = nextEntry ? nextEntry.startTime : "11:59 PM";
+  }
+
+  const endTotalMins = convertToMinutes(endTime);
+  const durationMins = endTotalMins - startTotalMins;
+
+  // Detect overlapping events
+  let offsetLeft = baseLeft;
+  let overlapCount = 0;
+
+  for (let i = 0; i < index; i++) {
+    const prevEntry = sortedEntries[i];
+    const prevStart = convertToMinutes(prevEntry.startTime);
+    const prevEnd = convertToMinutes(prevEntry.endTime || "11:59 PM");
+
+    if (startTotalMins < prevEnd && endTotalMins > prevStart) {
+      // If overlapping, increase offset with gap
+      overlapCount++;
+      offsetLeft = baseLeft + overlapCount * (200 + gapWidth); // Add spacing
+    }
+  }
+
+  return (
+    <div key={entry.id}>
+      {/* Transparent Duration Block (Stays on Timeline) */}
+      <div
+        style={{
+          position: "absolute",
+          top: startTotalMins * minuteHeight,
+          left: "0px", // Align with the timeline
+          height: durationMins * minuteHeight + "px",
+          width: "60px",
+          backgroundColor: labelColors[entry.label] || "#9E9E9E",
+          opacity: 0.3,
+          borderRadius: "5px",
+        }}
+      />
+
+      {/* Floating Time Entry Box (Now with proper spacing) */}
+      <div
+        style={{
+          position: "absolute",
+          top: startTotalMins * minuteHeight,
+          left: `${offsetLeft}px`, // Dynamically shift based on overlap
+          width: "220px",
+        }}
+      >
+        <TimeEntryComponent entry={entry} onDelete={onDelete} onEdit={onEdit} />
+      </div>
+    </div>
+  );
+})}
+
       </div>
     </div>
   );
