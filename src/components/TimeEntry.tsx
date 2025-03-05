@@ -1,5 +1,5 @@
 import React from "react";
-import { TimeEntry } from "../types"; // Import our TimeEntry type
+import { TimeEntry } from "../types";
 
 // Define colors for different activity types
 const labelColors: { [key: string]: string } = {
@@ -25,9 +25,9 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry }) => {
         color: "#fff",
         padding: "10px",
         borderRadius: "5px",
-        marginBottom: "8px",
+        margin: "5px 0",
         width: "80%",
-        textAlign: "center",
+        fontSize: "14px",
       }}
     >
       <strong>{entry.startTime} - {entry.endTime || "??"}</strong>
