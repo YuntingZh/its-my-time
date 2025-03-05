@@ -1,62 +1,60 @@
 import React, { useState, useEffect } from "react";
 import { db, collection, addDoc, getDocs } from "./firebaseConfig";
-import OpenAI from 'openai';
-
-interface TimeEntry {
-  id?: string;
-  activity: string;
-  startTime: string;
-  endTime?: string;
-  date: string;
-}
+import OpenAI from "openai";
+import Timeline from "./components/Timeline";
+import InputBox from "./components/InputBox";
+import { TimeEntry, LabelType } from "./types"; 
 
 // Setup OpenAI API
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
 });
 
 const TimeLogger: React.FC = () => {
-  const [inputText, setInputText] = useState<string>("");
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
 
-  // Function to parse input using AI
+  // AI-powered parsing
   const parseInputWithAI = async (text: string) => {
     const prompt = `Extract the start time, end time, and activity from this text: "${text}". 
-    Format as JSON: {"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}. 
-    The label should be "idle" if it's a non-productive task (e.g., chilling, watching TV). Otherwise, label it as "productive".`;
-  
+    Return JSON ONLY in this format:
+    {"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.
+    Categories: ["work", "exercise", "idle", "social", "sleep", "unknown"].`;
+
     try {
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "system", content: prompt }],
         max_tokens: 50,
       });
-  
-      // Extract structured JSON response
+
+      console.log("AI Response:", response);
       const extracted = JSON.parse(response.choices[0].message?.content || "{}");
-  
+      // Fix: Ensure `label` is one of the expected types
+      const validLabels = ["work", "exercise", "idle", "social", "sleep", "unknown"] as const;
+      const label = validLabels.includes(extracted.label) ? extracted.label : "unknown";
+
       return {
         startTime: extracted.startTime || "00:00 AM",
         endTime: extracted.endTime || "00:00 AM",
-        activity: extracted.activity || "Unknown Activity",
-        label: extracted.label || "idle",
+        activity: extracted.activity || "Error Parsing",
+        label: label as "work" | "exercise" | "idle" | "social" | "sleep" | "unknown",
       };
     } catch (error) {
       console.error("AI Parsing Error:", error);
       return { startTime: "00:00 AM", endTime: "00:00 AM", activity: "Error Parsing", label: "unknown" };
     }
-  };  
+  };
 
   // Function to add a new time entry
-  const addTimeEntry = async () => {
+  const addTimeEntry = async (inputText: string) => {
     if (!inputText) return;
-  
+
     const { startTime, endTime, activity, label } = await parseInputWithAI(inputText);
     const date = new Date().toISOString().split("T")[0];
-  
+
     try {
       await addDoc(collection(db, "time_entries"), { startTime, endTime, activity, label, date });
-      setInputText("");
       fetchEntries(); // Refresh list
     } catch (error) {
       console.error("Error adding time entry:", error);
@@ -67,41 +65,37 @@ const TimeLogger: React.FC = () => {
   const fetchEntries = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "time_entries"));
-      const entries: TimeEntry[] = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as TimeEntry),
-      }));
+      const entries: TimeEntry[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<TimeEntry, "label"> & { label: string };
+  
+        return {
+          id: doc.id,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          activity: data.activity,
+          date: data.date,
+          label: (["work", "exercise", "idle", "social", "sleep", "unknown"].includes(data.label)
+            ? (data.label as LabelType) // Explicitly cast as LabelType
+            : "unknown"), // If it's invalid, default to "unknown"
+        };
+      });
       setTimeEntries(entries);
     } catch (error) {
       console.error("Error fetching entries:", error);
     }
   };
+  
 
-  // Load entries on component mount
   useEffect(() => {
     fetchEntries();
   }, []);
 
   return (
-    <div style={{ padding: "20px", maxWidth: "400px", margin: "auto" }}>
+    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
-      <input
-        type="text"
-        placeholder='Try typing "11am cooking, chilling"'
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-      />
-      <button onClick={addTimeEntry}>Add Entry</button>
-
-      <h3>Logged Entries:</h3>
-      <ul>
-        {timeEntries.map((entry) => (
-          <li key={entry.id}>
-            {entry.date} - {entry.startTime}: {entry.activity}
-          </li>
-        ))}
-      </ul>
+      <InputBox onAddEntry={addTimeEntry} />
+      <Timeline entries={timeEntries} />
     </div>
   );
 };
