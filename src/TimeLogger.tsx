@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { db, collection, addDoc, getDocs } from "./firebaseConfig";
+import { db } from "./firebaseConfig"; // Import db from firebaseConfig
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import OpenAI from "openai";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
-import { TimeEntry, LabelType } from "./types"; 
+import { TimeEntry, LabelType } from "./types";
 
 // Setup OpenAI API
 const openai = new OpenAI({
@@ -60,6 +61,33 @@ const TimeLogger: React.FC = () => {
       console.error("Error adding time entry:", error);
     }
   };
+  // Delete Entry
+  const deleteEntry = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "time_entries", id));
+      setTimeEntries((prev) => prev.filter((entry) => entry.id !== id)); // Remove from state
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+    }
+  };
+
+  // Edit Entry
+  const editEntry = async (updatedEntry: TimeEntry) => {
+    if (!updatedEntry.id) return;
+    try {
+      await updateDoc(doc(db, "time_entries", updatedEntry.id), {
+        startTime: updatedEntry.startTime,
+        endTime: updatedEntry.endTime,
+        activity: updatedEntry.activity,
+      });
+
+      setTimeEntries((prev) =>
+        prev.map((entry) => (entry.id === updatedEntry.id ? updatedEntry : entry))
+      );
+    } catch (error) {
+      console.error("Error updating entry:", error);
+    }
+  };
 
   // Fetch time entries from Firestore
   const fetchEntries = async () => {
@@ -67,7 +95,7 @@ const TimeLogger: React.FC = () => {
       const querySnapshot = await getDocs(collection(db, "time_entries"));
       const entries: TimeEntry[] = querySnapshot.docs.map((doc) => {
         const data = doc.data() as Omit<TimeEntry, "label"> & { label: string };
-  
+
         return {
           id: doc.id,
           startTime: data.startTime,
@@ -84,7 +112,7 @@ const TimeLogger: React.FC = () => {
       console.error("Error fetching entries:", error);
     }
   };
-  
+
 
   useEffect(() => {
     fetchEntries();
@@ -95,8 +123,8 @@ const TimeLogger: React.FC = () => {
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
       <InputBox onAddEntry={addTimeEntry} />
-      <Timeline entries={timeEntries} />
-    </div>
+      <Timeline entries={timeEntries} onDelete={deleteEntry} onEdit={editEntry} /> 
+      </div>
   );
 };
 
