@@ -78,7 +78,8 @@ const TimeLogger: React.FC = () => {
       await updateDoc(doc(db, "time_entries", updatedEntry.id), {
         startTime: updatedEntry.startTime,
         endTime: updatedEntry.endTime,
-        activity: updatedEntry.activity,
+        // activity: updatedEntry.activity,
+        lable: updatedEntry.label,
       });
 
       setTimeEntries((prev) =>
@@ -123,8 +124,8 @@ const TimeLogger: React.FC = () => {
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
       <InputBox onAddEntry={addTimeEntry} />
-      <Timeline entries={timeEntries} onDelete={deleteEntry} onEdit={editEntry} /> 
-      </div>
+      <Timeline entries={timeEntries} onDelete={deleteEntry} onEdit={editEntry} />
+    </div>
   );
 };
 

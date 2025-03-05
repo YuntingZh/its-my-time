@@ -40,6 +40,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, onDelete, onEdit 
           <input type="text" name="startTime" value={editedEntry.startTime} onChange={handleEditChange} />
           <input type="text" name="endTime" value={editedEntry.endTime} onChange={handleEditChange} />
           <input type="text" name="activity" value={editedEntry.activity} onChange={handleEditChange} />
+          <input type="text" name="label" value={editedEntry.label} onChange={handleEditChange} />
           <button onClick={handleSave} style={{ backgroundColor: "#34A853", color: "white", padding: "5px", border: "none", borderRadius: "3px", cursor: "pointer", marginTop: "5px" }}>
             Save
           </button>
