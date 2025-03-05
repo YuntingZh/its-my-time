@@ -1,0 +1,15 @@
+# Ignore node_modules (large dependencies)
+node_modules/
+
+# Ignore environment variables (security)
+.env
+firebaseConfig.js
+
+# Ignore build files (if using Create React App or Vite)
+dist/
+build/
+
+# Ignore logs & system files
+*.log
+.DS_Store
+
