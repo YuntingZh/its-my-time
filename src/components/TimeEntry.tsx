@@ -1,14 +1,6 @@
 import React, { useState } from "react";
 import { TimeEntry } from "../types";
-
-const labelColors: { [key: string]: string } = {
-  work: "#4285F4", // Blue
-  exercise: "#34A853", // Green
-  idle: "#F4B400", // Yellow
-  social: "#FBBC05", // Orange
-  sleep: "#5F6368", // Dark Gray
-  unknown: "#9E9E9E", // Default Gray
-};
+import { labelColors } from "../colors"; // Adjust path if necessary
 
 interface TimeEntryProps {
   entry: TimeEntry;
