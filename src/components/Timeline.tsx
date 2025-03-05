@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { TimeEntry } from "../types";
 import TimeEntryComponent from "./TimeEntry";
 import { labelColors } from "../colors"; // Adjust path if necessary
@@ -13,6 +13,12 @@ interface TimelineProps {
 }
 
 const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
+  const today = new Date().toISOString().split("T")[0]; // Get today's date as "YYYY-MM-DD"
+  const [selectedDate, setSelectedDate] = useState(today); // Track the selected date
+
+  // Filter entries to only show records for the selected date
+  const filteredEntries = entries.filter(entry => entry.date === selectedDate);
+
   const timelineHeight = 1440; // Total height in pixels (24 hours * 60 minutes)
   const minuteHeight = timelineHeight / 1440; // Height per minute
   const containerWidth = 600; // Adjust width for better spacing
@@ -39,13 +45,30 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
   };
 
   // Sort entries by start time (now correctly handling AM/PM)
-  const sortedEntries = [...entries].sort((a, b) => {
+  const sortedEntries = [...filteredEntries].sort((a, b) => {
     return convertToMinutes(a.startTime) - convertToMinutes(b.startTime);
   });
 
   return (
     <div style={{ width: containerWidth, margin: "auto", position: "relative", padding: "20px" }}>
-      <h3>📊 Detailed Timeline</h3>
+      {/* Date Selector */}
+      <div style={{ textAlign: "center", marginBottom: "10px" }}>
+        <label htmlFor="datePicker">📅 Select Date: </label>
+        <input
+          type="date"
+          id="datePicker"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          style={{
+            padding: "5px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            marginLeft: "5px",
+          }}
+        />
+      </div>
+
+      <h3>📊 Detailed Timeline for {new Date(selectedDate).toDateString()}</h3>
       <div style={{ position: "relative", borderLeft: "4px solid #ddd", paddingLeft: "20px", height: timelineHeight + "px" }}>
         {/* Render Hourly Slots */}
         {Array.from({ length: 24 }).map((_, hour) => (
@@ -64,68 +87,64 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
         ))}
 
         {/* Render Entries with Precise Scaling */}
+        {sortedEntries.map((entry, index) => {
+          const startTotalMins = convertToMinutes(entry.startTime);
 
+          let endTime = entry.endTime;
+          if (!endTime) {
+            const nextEntry = sortedEntries[index + 1];
+            endTime = nextEntry ? nextEntry.startTime : "11:59 PM";
+          }
 
-{sortedEntries.map((entry, index) => {
+          const endTotalMins = convertToMinutes(endTime);
+          const durationMins = endTotalMins - startTotalMins;
 
-  const startTotalMins = convertToMinutes(entry.startTime);
+          // Detect overlapping events
+          let offsetLeft = baseLeft;
+          let overlapCount = 0;
 
-  let endTime = entry.endTime;
-  if (!endTime) {
-    const nextEntry = sortedEntries[index + 1];
-    endTime = nextEntry ? nextEntry.startTime : "11:59 PM";
-  }
+          for (let i = 0; i < index; i++) {
+            const prevEntry = sortedEntries[i];
+            const prevStart = convertToMinutes(prevEntry.startTime);
+            const prevEnd = convertToMinutes(prevEntry.endTime || "11:59 PM");
 
-  const endTotalMins = convertToMinutes(endTime);
-  const durationMins = endTotalMins - startTotalMins;
+            if (startTotalMins < prevEnd && endTotalMins > prevStart) {
+              // If overlapping, increase offset with gap
+              overlapCount++;
+              offsetLeft = baseLeft + overlapCount * (200 + gapWidth); // Add spacing
+            }
+          }
 
-  // Detect overlapping events
-  let offsetLeft = baseLeft;
-  let overlapCount = 0;
+          return (
+            <div key={entry.id}>
+              {/* Transparent Duration Block (Stays on Timeline) */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: startTotalMins * minuteHeight,
+                  left: "0px", // Align with the timeline
+                  height: durationMins * minuteHeight + "px",
+                  width: "60px",
+                  backgroundColor: labelColors[entry.label] || "#9E9E9E",
+                  opacity: 0.3,
+                  borderRadius: "5px",
+                }}
+              />
 
-  for (let i = 0; i < index; i++) {
-    const prevEntry = sortedEntries[i];
-    const prevStart = convertToMinutes(prevEntry.startTime);
-    const prevEnd = convertToMinutes(prevEntry.endTime || "11:59 PM");
-
-    if (startTotalMins < prevEnd && endTotalMins > prevStart) {
-      // If overlapping, increase offset with gap
-      overlapCount++;
-      offsetLeft = baseLeft + overlapCount * (200 + gapWidth); // Add spacing
-    }
-  }
-
-  return (
-    <div key={entry.id}>
-      {/* Transparent Duration Block (Stays on Timeline) */}
-      <div
-        style={{
-          position: "absolute",
-          top: startTotalMins * minuteHeight,
-          left: "0px", // Align with the timeline
-          height: durationMins * minuteHeight + "px",
-          width: "60px",
-          backgroundColor: labelColors[entry.label] || "#9E9E9E",
-          opacity: 0.3,
-          borderRadius: "5px",
-        }}
-      />
-
-      {/* Floating Time Entry Box (Now with proper spacing) */}
-      <div
-        style={{
-          position: "absolute",
-          top: startTotalMins * minuteHeight,
-          left: `${offsetLeft}px`, // Dynamically shift based on overlap
-          width: "220px",
-        }}
-      >
-        <TimeEntryComponent entry={entry} onDelete={onDelete} onEdit={onEdit} />
-      </div>
-    </div>
-  );
-})}
-
+              {/* Floating Time Entry Box (Now with proper spacing) */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: startTotalMins * minuteHeight,
+                  left: `${offsetLeft}px`, // Dynamically shift based on overlap
+                  width: "220px",
+                }}
+              >
+                <TimeEntryComponent entry={entry} onDelete={onDelete} onEdit={onEdit} />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
