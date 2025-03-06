@@ -2,56 +2,49 @@ import React, { useState } from "react";
 import { TimeEntry } from "../types/timeEntry";
 import TimeEntryComponent from "./TimeEntry";
 
-const gapWidth = 10; 
 const baseLeft = 100; 
 
 interface TimelineProps {
   entries: TimeEntry[];
-  getLabelColor: (labelName: string) => string; // Add this line
+  getLabelColor: (labelName: string) => string;
   onDelete: (id: string) => void;
   onEdit: (entry: TimeEntry) => void;
 }
 
 const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit }) => {
-  const today = new Date().toLocaleDateString("en-CA"); // ✅ Local time in "YYYY-MM-DD"
-  const [selectedDate, setSelectedDate] = useState(today); // Track the selected date
+  const today = new Date().toLocaleDateString("en-CA");
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [activeEntryId, setActiveEntryId] = useState<string | null>(null); // Track which entry is in front
 
-  // Filter entries to only show records for the selected date
+  // Filter entries for the selected date
   const filteredEntries = entries.filter(entry => entry.date === selectedDate);
-
-  const timelineHeight = 1440; // Total height in pixels (24 hours * 60 minutes)
-  const minuteHeight = timelineHeight / 1440; // Height per minute
-  const containerWidth = 600; // Adjust width for better spacing
+  const timelineHeight = 1440;
+  const minuteHeight = timelineHeight / 1440;
+  const containerWidth = 600;
 
   // Convert AM/PM time to minutes from midnight
   const convertToMinutes = (timeStr: string): number => {
-    if (!timeStr) return 0; // Handle missing time safely
-
-    const [time, period] = timeStr.split(" "); // Split "4:00 PM" into ["4:00", "PM"]
+    if (!timeStr) return 0;
+    const [time, period] = timeStr.split(" ");
     const [hourStr, minStr] = time.split(":");
     let hour = parseInt(hourStr, 10);
     const minutes = parseInt(minStr, 10);
 
-    // Convert PM times correctly
-    if (period === "PM" && hour !== 12) {
-      hour += 12;
-    }
-    // Convert 12 AM (midnight) to 0 hours
-    if (period === "AM" && hour === 12) {
-      hour = 0;
-    }
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
 
-    return hour * 60 + minutes; // Return total minutes from midnight
+    return hour * 60 + minutes;
   };
-   // Convert the Date to Local Time Before Displaying
+
   const formatDateToLocalString = (dateStr: string) => {
-    const date = new Date(dateStr + "T00:00:00"); // Force local timezone
+    const date = new Date(dateStr + "T00:00:00");
     return date.toDateString();
   };
-  // Sort entries by start time (now correctly handling AM/PM)
-  const sortedEntries = [...filteredEntries].sort((a, b) => {
-    return convertToMinutes(a.startTime) - convertToMinutes(b.startTime);
-  });
+
+  // Sort entries by start time
+  const sortedEntries = [...filteredEntries].sort(
+    (a, b) => convertToMinutes(a.startTime) - convertToMinutes(b.startTime)
+  );
 
   return (
     <div style={{ width: containerWidth, margin: "auto", position: "relative", padding: "20px" }}>
@@ -90,61 +83,49 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
           </div>
         ))}
 
-        {/* Render Entries with Precise Scaling */}
+        {/* Render Entries with Click-to-Bring-to-Front Feature */}
         {sortedEntries.map((entry, index) => {
           const startTotalMins = convertToMinutes(entry.startTime);
-
-          let endTime = entry.endTime;
-          if (!endTime) {
-            const nextEntry = sortedEntries[index + 1];
-            endTime = nextEntry ? nextEntry.startTime : "11:59 PM";
-          }
-
+          let endTime = entry.endTime || "11:59 PM";
           const endTotalMins = convertToMinutes(endTime);
           const durationMins = endTotalMins - startTotalMins;
 
-          // Detect overlapping events
-          let offsetLeft = baseLeft;
-          let overlapCount = 0;
-
-          for (let i = 0; i < index; i++) {
-            const prevEntry = sortedEntries[i];
-            const prevStart = convertToMinutes(prevEntry.startTime);
-            const prevEnd = convertToMinutes(prevEntry.endTime || "11:59 PM");
-
-            if (startTotalMins < prevEnd && endTotalMins > prevStart) {
-              // If overlapping, increase offset with gap
-              overlapCount++;
-              offsetLeft = baseLeft + overlapCount * (200 + gapWidth); // Add spacing
-            }
-          }
-
           return (
             <div key={entry.id}>
-              {/* Transparent Duration Block (Stays on Timeline) */}
+              {/* Transparent Background Block (for Timeline Indicator) */}
               <div
                 style={{
                   position: "absolute",
                   top: startTotalMins * minuteHeight,
-                  left: "0px", // Align with the timeline
+                  left: "0px",
                   height: durationMins * minuteHeight + "px",
                   width: "60px",
-                  backgroundColor: getLabelColor(entry.label)|| "#E0E0E0",
+                  backgroundColor: getLabelColor(entry.label) || "#E0E0E0",
                   opacity: 0.3,
                   borderRadius: "5px",
                 }}
               />
 
-              {/* Floating Time Entry Box (Now with proper spacing) */}
+              {/* Time Entry Box with Click-to-Bring-to-Front */}
               <div
-                style={{
+onClick={() => setActiveEntryId(activeEntryId === entry.id ? null : entry.id || null)}
+style={{
                   position: "absolute",
                   top: startTotalMins * minuteHeight,
-                  left: `${offsetLeft}px`, // Dynamically shift based on overlap
+                  left: `${baseLeft}px`,
                   width: "220px",
+                  cursor: "pointer",
+                  zIndex: activeEntryId === entry.id ? 50 : 10, // Bring to front on click
+                  transform: activeEntryId === entry.id ? "scale(1.1)" : "scale(1)", // Slight zoom-in effect
+                  transition: "transform 0.2s ease-in-out, z-index 0.2s",
                 }}
               >
-                <TimeEntryComponent entry={entry}  getLabelColor={getLabelColor} onDelete={onDelete} onEdit={onEdit} />
+                <TimeEntryComponent
+                  entry={entry}
+                  getLabelColor={getLabelColor}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                />
               </div>
             </div>
           );
