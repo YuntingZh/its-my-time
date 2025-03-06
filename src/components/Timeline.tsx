@@ -13,7 +13,7 @@ interface TimelineProps {
 }
 
 const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit }) => {
-  const today = new Date().toISOString().split("T")[0]; // Get today's date as "YYYY-MM-DD"
+  const today = new Date().toLocaleDateString("en-CA"); // ✅ Local time in "YYYY-MM-DD"
   const [selectedDate, setSelectedDate] = useState(today); // Track the selected date
 
   // Filter entries to only show records for the selected date
