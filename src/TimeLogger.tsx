@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { db } from "./services/firebaseConfig"; // Import db from firebaseConfig
+import { db } from "./services/firebaseConfig"; 
 import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import OpenAI from "openai";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
-import { LabelType } from "./types/label";
+import LabelManager from "./components/LabelManager";
+import { getLabels } from "./services/labelService";
+import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
-import LabelManager from "./components/LabelManager"; 
 
 // Setup OpenAI API
 const openai = new OpenAI({
@@ -16,45 +17,109 @@ const openai = new OpenAI({
 
 const TimeLogger: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]); // Store labels from Firestore
 
-  // AI-powered parsing
+  // 🏷️ Fetch labels from Firestore
+  const fetchLabels = async () => {
+    const fetchedLabels = await getLabels();
+    // console.log("🔥 Labels from Firestore:", fetchedLabels); // Debugging log
+    setLabels(fetchedLabels);
+  };
+  // 🔹 Dynamically get label color when displaying labels
+  const getLabelColor = (labelName: string) => {
+    // console.log("🟢 Looking for label color:", labelName);
+    // console.log("📌 Current labels in state:", labels);
+  
+    const label = labels.find(label => label.name.toLowerCase() === labelName.toLowerCase());
+  
+    if (!label) console.warn("⚠️ Label not found in labels[]:", labelName);
+    
+    return label ? label.color : "#9E9E9E"; // Default gray if not found
+  };
+  
+  // 🕒 Fetch time entries from Firestore
+  const fetchEntries = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "time_entries"));
+      const entries: TimeEntry[] = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          activity: data.activity,
+          date: data.date,
+          label: data.label, // Store the label name (not color)
+        };
+      });
+      setTimeEntries(entries);
+    } catch (error) {
+      console.error("Error fetching entries:", error);
+    }
+  };
+
+
+  // 🧠 AI-powered input parsing
   const parseInputWithAI = async (text: string) => {
-    const prompt = `Extract the start time, end time, and activity from this text: "${text}". 
+    // 🔹 Get all label names, including sub-labels
+    const labelNames = labels.map(label => {
+      if (label.parentId) {
+        // 🔹 Find the parent label and explicitly link them
+        const parentLabel = labels.find(l => l.id === label.parentId);
+        return parentLabel ? `"${label.name}" (subcategory of "${parentLabel.name}")` : `"${label.name}"`;
+      }
+      return `"${label.name}"`; // For top-level labels
+    }).join(", ");    
+  
+    console.log("📌 AI Label Categories Sent to OpenAI:", labelNames); // Debugging Log
+  
+    const prompt = `Extract the start time, end time, and activity from this text: "${text}".  
+    Match it to one of these categories: [${labelNames}].  
+    
+    IMPORTANT:  
+    - **If a subcategory exists, ALWAYS choose the most specific one** instead of the general category.  
+    - **For example, "Coding" (subcategory of "Work") should be chosen instead of just "Work".**  
+    - **"Call my loved ones" (subcategory of "Social") should be chosen instead of just "Social".**  
+    
     Return JSON ONLY in this format:
-    {"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.
-    Categories: ["work", "exercise", "idle", "social", "sleep", "unknown"].`;
-
+    {"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.`;
+    
+    
     try {
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "system", content: prompt }],
         max_tokens: 50,
       });
-
-      console.log("AI Response:", response);
+  
+      console.log("🔥 AI Response:", response.choices[0].message?.content); // Debug AI output
       const extracted = JSON.parse(response.choices[0].message?.content || "{}");
-      // Fix: Ensure `label` is one of the expected types
-      const validLabels = ["work", "exercise", "idle", "social", "sleep", "unknown"] as const;
-      const label = validLabels.includes(extracted.label) ? extracted.label : "unknown";
-
+  
+      // Ensure AI result matches a Firestore label
+      const labelExists = labels.some(label => label.name === extracted.label);
+      const finalLabel = labelExists ? extracted.label : "unknown";
+  
+      console.log("✅ Final Label Assigned:", finalLabel); // Debug Final Label
+  
       return {
         startTime: extracted.startTime || "00:00 AM",
         endTime: extracted.endTime || "00:00 AM",
         activity: extracted.activity || "Error Parsing",
-        label: label as "work" | "exercise" | "idle" | "social" | "sleep" | "unknown",
+        label: finalLabel,
       };
     } catch (error) {
-      console.error("AI Parsing Error:", error);
+      console.error("❌ AI Parsing Error:", error);
       return { startTime: "00:00 AM", endTime: "00:00 AM", activity: "Error Parsing", label: "unknown" };
     }
   };
-
-  // Function to add a new time entry
+  
+  
+  // ➕ Add a new time entry
   const addTimeEntry = async (inputText: string) => {
     if (!inputText) return;
 
     const { startTime, endTime, activity, label } = await parseInputWithAI(inputText);
-    const date = new Date().toISOString().split("T")[0];
+    const date = new Date().toLocaleDateString("en-CA"); 
 
     try {
       await addDoc(collection(db, "time_entries"), { startTime, endTime, activity, label, date });
@@ -63,7 +128,8 @@ const TimeLogger: React.FC = () => {
       console.error("Error adding time entry:", error);
     }
   };
-  // Delete Entry
+
+  // 🗑️ Delete an entry
   const deleteEntry = async (id: string) => {
     try {
       await deleteDoc(doc(db, "time_entries", id));
@@ -73,7 +139,7 @@ const TimeLogger: React.FC = () => {
     }
   };
 
-  // Edit Entry
+  // ✏️ Edit an existing entry
   const editEntry = async (updatedEntry: TimeEntry) => {
     if (!updatedEntry.id) return;
     try {
@@ -92,42 +158,24 @@ const TimeLogger: React.FC = () => {
     }
   };
 
-  // Fetch time entries from Firestore
-  const fetchEntries = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "time_entries"));
-      const entries: TimeEntry[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data() as Omit<TimeEntry, "label"> & { label: string };
-
-        return {
-          id: doc.id,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          activity: data.activity,
-          date: data.date,
-          label: (["work", "exercise", "idle", "social", "sleep", "unknown"].includes(data.label)
-            ? (data.label as LabelType) // Explicitly cast as LabelType
-            : "unknown"), // If it's invalid, default to "unknown"
-        };
-      });
-      setTimeEntries(entries);
-    } catch (error) {
-      console.error("Error fetching entries:", error);
-    }
-  };
-
-
+  // ⏳ Load labels first, then fetch entries
   useEffect(() => {
-    fetchEntries();
+    const fetchData = async () => {
+      await fetchLabels(); // Load labels first
+      await fetchEntries(); // Then load entries
+    };
+    
+    fetchData();
   }, []);
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
-      <LabelManager /> {/* Add Label Manager to display it */}
+      
+      <LabelManager /> {/* Label Management */}
       <InputBox onAddEntry={addTimeEntry} />
-      <Timeline entries={timeEntries} onDelete={deleteEntry} onEdit={editEntry} />
+      <Timeline entries={timeEntries} getLabelColor={getLabelColor} onDelete={deleteEntry} onEdit={editEntry} />
     </div>
   );
 };

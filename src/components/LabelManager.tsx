@@ -11,7 +11,6 @@ const LabelManager: React.FC = () => {
   useEffect(() => {
     const loadLabels = async () => {
       const fetchedLabels = await getLabels();
-      console.log("Fetched Labels:", fetchedLabels); // 🔥 Check if labels exist
       setLabels(fetchedLabels);
     };
     loadLabels();

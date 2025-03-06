@@ -1,17 +1,18 @@
 import React, { useState } from "react";
 import { TimeEntry } from "../types/timeEntry";
 import TimeEntryComponent from "./TimeEntry";
-import { labelColors } from "../types/label"; 
+
 const gapWidth = 10; 
 const baseLeft = 100; 
 
 interface TimelineProps {
   entries: TimeEntry[];
+  getLabelColor: (labelName: string) => string; // Add this line
   onDelete: (id: string) => void;
   onEdit: (entry: TimeEntry) => void;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
+const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit }) => {
   const today = new Date().toISOString().split("T")[0]; // Get today's date as "YYYY-MM-DD"
   const [selectedDate, setSelectedDate] = useState(today); // Track the selected date
 
@@ -128,7 +129,7 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
                   left: "0px", // Align with the timeline
                   height: durationMins * minuteHeight + "px",
                   width: "60px",
-                  backgroundColor: labelColors[entry.label] || "#9E9E9E",
+                  backgroundColor: getLabelColor(entry.label)|| "#E0E0E0",
                   opacity: 0.3,
                   borderRadius: "5px",
                 }}
@@ -143,7 +144,7 @@ const Timeline: React.FC<TimelineProps> = ({ entries, onDelete, onEdit }) => {
                   width: "220px",
                 }}
               >
-                <TimeEntryComponent entry={entry} onDelete={onDelete} onEdit={onEdit} />
+                <TimeEntryComponent entry={entry}  getLabelColor={getLabelColor} onDelete={onDelete} onEdit={onEdit} />
               </div>
             </div>
           );

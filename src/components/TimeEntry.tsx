@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { TimeEntry } from "../types/timeEntry";
-import { labelColors } from "../types/label"; 
 
 interface TimeEntryProps {
   entry: TimeEntry;
+  getLabelColor: (labelName: string) => string; // Add this line
   onDelete: (id: string) => void;
   onEdit: (entry: TimeEntry) => void;
 }
 
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, onDelete, onEdit }) => {
+const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, onDelete, onEdit }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEntry, setEditedEntry] = useState(entry);
 
@@ -24,7 +24,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, onDelete, onEdit 
   return (
     <div
       style={{
-        backgroundColor: labelColors[entry.label] || "#9E9E9E",
+        backgroundColor: getLabelColor(entry.label) || "#9E9E9E",
         color: "#fff",
         padding: "10px",
         borderRadius: "5px",
