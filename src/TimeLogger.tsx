@@ -73,16 +73,28 @@ const TimeLogger: React.FC = () => {
   
     console.log("📌 AI Label Categories Sent to OpenAI:", labelNames); // Debugging Log
   
-    const prompt = `Extract the start time, end time, and activity from this text: "${text}".  
-    Match it to one of these categories: [${labelNames}].  
-    
-    IMPORTANT:  
-    - **If a subcategory exists, ALWAYS choose the most specific one** instead of the general category.  
-    - **For example, "Coding" (subcategory of "Work") should be chosen instead of just "Work".**  
-    - **"Call my loved ones" (subcategory of "Social") should be chosen instead of just "Social".**  
-    
-    Return JSON ONLY in this format:
-    {"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.`;
+    const now = new Date();
+const currentTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+const prompt = `Extract the start time, end time, and activity from this text: "${text}".  
+Match it to one of these categories: [${labelNames}].  
+
+IMPORTANT:  
+- **If a subcategory exists, ALWAYS choose the most specific one** instead of the general category.  
+- **For example, "Coding" (subcategory of "Work") should be chosen instead of just "Work".**  
+- **"Call my loved ones" (subcategory of "Social") should be chosen instead of just "Social".**  
+
+Time Handling:  
+- If the user says **"now"**, return the current time as **"${currentTime}"**.  
+- If they say **"in X minutes/hours"**, add X to the current time and return in **"HH:MM AM/PM"** format.  
+- If they say **"later"**, assume 1 hour from now and return in **"HH:MM AM/PM"** format.  
+- If they say **"this afternoon"**, assume **3:00 PM**.  
+- If they say **"tonight"**, assume **8:00 PM**.  
+- **Never return words like "now + 10 minutes", always return actual time.**  
+
+Return JSON ONLY in this format:
+{"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.`;
+
     
     
     try {
