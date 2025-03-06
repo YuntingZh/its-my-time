@@ -1,4 +1,4 @@
-export type LabelType = "work" | "exercise" | "idle" | "social" | "sleep" | "unknown";
+import { LabelType } from "./label";
 
 export interface TimeEntry {
   id?: string;
@@ -8,3 +8,4 @@ export interface TimeEntry {
   date: string;
   label: LabelType;
 }
+

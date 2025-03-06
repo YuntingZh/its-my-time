@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { TimeEntry } from "../types";
-import { labelColors } from "../colors"; // Adjust path if necessary
+import { TimeEntry } from "../types/timeEntry";
+import { labelColors } from "../types/label"; 
 
 interface TimeEntryProps {
   entry: TimeEntry;

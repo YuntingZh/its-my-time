@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { TimeEntry } from "../types";
+import { TimeEntry } from "../types/timeEntry";
 import TimeEntryComponent from "./TimeEntry";
-import { labelColors } from "../colors"; // Adjust path if necessary
-
+import { labelColors } from "../types/label"; 
 const gapWidth = 10; 
 const baseLeft = 100; 
 

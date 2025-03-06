@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { db } from "./firebaseConfig"; // Import db from firebaseConfig
+import { db } from "./services/firebaseConfig"; // Import db from firebaseConfig
 import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import OpenAI from "openai";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
-import { TimeEntry, LabelType } from "./types";
+import { LabelType } from "./types/label";
+import { TimeEntry } from "./types/timeEntry";
+import LabelManager from "./components/LabelManager"; 
 
 // Setup OpenAI API
 const openai = new OpenAI({
@@ -123,6 +125,7 @@ const TimeLogger: React.FC = () => {
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
+      <LabelManager /> {/* Add Label Manager to display it */}
       <InputBox onAddEntry={addTimeEntry} />
       <Timeline entries={timeEntries} onDelete={deleteEntry} onEdit={editEntry} />
     </div>
