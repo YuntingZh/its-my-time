@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { TimeEntry } from "../types/timeEntry";
 import TimeEntryComponent from "./TimeEntry";
+import Charts from "./Charts";
 
 const baseLeft = 100; 
 
@@ -64,7 +65,9 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
           }}
         />
       </div>
-
+   {/* ✅ Pie Chart Added Below Date Selector */}
+   <div style={{ textAlign: "center", marginBottom: "20px" }}>
+   <Charts entries={filteredEntries} getLabelColor={getLabelColor} />      </div>
       <h3>📊 Detailed Timeline for {formatDateToLocalString(selectedDate)}</h3>
       <div style={{ position: "relative", borderLeft: "4px solid #ddd", paddingLeft: "20px", height: timelineHeight + "px" }}>
         {/* Render Hourly Slots */}
