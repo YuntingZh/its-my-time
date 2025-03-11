@@ -92,7 +92,7 @@ const Charts: React.FC<ChartsProps> = ({ entries, getLabelColor }) => {
       {
         data: sortedTags.map((item) => item.value),
         backgroundColor: sortedTags.map((item) =>
-          item.tag === "Unlogged Time" ? "#3E3E3E" : getLabelColor(item.tag)
+          item.tag === "Unlogged Time" ? "#ededed" : getLabelColor(item.tag)
         ),
         borderWidth: 1,
         hoverOffset: 10,
