@@ -5,9 +5,11 @@ import OpenAI from "openai";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
 import LabelManager from "./components/LabelManager";
+import LifeCoach from "./components/LifeCoach"; 
 import { getLabels } from "./services/labelService";
 import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
+
 
 // Setup OpenAI API
 const openai = new OpenAI({
@@ -19,16 +21,13 @@ const TimeLogger: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [labels, setLabels] = useState<Label[]>([]); // Store labels from Firestore
 
-  // 🏷️ Fetch labels from Firestore
+  // Fetch labels from Firestore
   const fetchLabels = async () => {
     const fetchedLabels = await getLabels();
-    // console.log("🔥 Labels from Firestore:", fetchedLabels); // Debugging log
     setLabels(fetchedLabels);
   };
-  // 🔹 Dynamically get label color when displaying labels
+  // Dynamically get label color when displaying labels
   const getLabelColor = (labelName: string) => {
-    // console.log("🟢 Looking for label color:", labelName);
-    // console.log("📌 Current labels in state:", labels);
   
     const label = labels.find(label => label.name.toLowerCase() === labelName.toLowerCase());
   
@@ -37,7 +36,7 @@ const TimeLogger: React.FC = () => {
     return label ? label.color : "#9E9E9E"; // Default gray if not found
   };
   
-  // 🕒 Fetch time entries from Firestore
+  // Fetch time entries from Firestore
   const fetchEntries = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "time_entries"));
@@ -59,12 +58,12 @@ const TimeLogger: React.FC = () => {
   };
 
 
-  // 🧠 AI-powered input parsing
+  //  AI-powered input parsing
   const parseInputWithAI = async (text: string) => {
-    // 🔹 Get all label names, including sub-labels
+    //  Get all label names, including sub-labels
     const labelNames = labels.map(label => {
       if (label.parentId) {
-        // 🔹 Find the parent label and explicitly link them
+        // Find the parent label and explicitly link them
         const parentLabel = labels.find(l => l.id === label.parentId);
         return parentLabel ? `"${label.name}" (subcategory of "${parentLabel.name}")` : `"${label.name}"`;
       }
@@ -184,7 +183,7 @@ Return JSON ONLY in this format:
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
-      
+      <LifeCoach /> {/* Life Coach Component */}
       <LabelManager /> {/* Label Management */}
       <InputBox onAddEntry={addTimeEntry} />
       <Timeline entries={timeEntries} getLabelColor={getLabelColor} onDelete={deleteEntry} onEdit={editEntry} />
