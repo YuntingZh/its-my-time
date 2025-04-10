@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "./services/firebaseConfig"; 
 import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import OpenAI from "openai";
+import TimerTool from "./components/TimerTool";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
 import LabelManager from "./components/LabelManager";
@@ -186,6 +187,7 @@ Return JSON ONLY in this format:
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
+      <TimerTool /> {/* TimerTool Component */}
       <TodoList /> {/* TodoList Component */}
       <LifeCoach /> {/* Life Coach Component */}
       <LabelManager /> {/* Label Management */}
