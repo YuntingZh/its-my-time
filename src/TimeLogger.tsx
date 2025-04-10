@@ -7,6 +7,7 @@ import InputBox from "./components/InputBox";
 import LabelManager from "./components/LabelManager";
 import LifeCoach from "./components/LifeCoach"; 
 import TodoList from "./components/TodoList";
+import DailyCandyJar from "./components/DailyCandyJar";
 import { getLabels } from "./services/labelService";
 import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
@@ -190,6 +191,7 @@ Return JSON ONLY in this format:
       <LabelManager /> {/* Label Management */}
       <InputBox onAddEntry={addTimeEntry} />
       <Timeline entries={timeEntries} getLabelColor={getLabelColor} onDelete={deleteEntry} onEdit={editEntry} />
+      <DailyCandyJar /> {/* DailyCandyJar Component */}
     </div>
   );
 };
