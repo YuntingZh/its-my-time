@@ -6,9 +6,11 @@ import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
 import LabelManager from "./components/LabelManager";
 import LifeCoach from "./components/LifeCoach"; 
+import TodoList from "./components/TodoList";
 import { getLabels } from "./services/labelService";
 import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
+
 
 
 // Setup OpenAI API
@@ -183,6 +185,7 @@ Return JSON ONLY in this format:
     <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
       <p>Tracking time easily!</p>
+      <TodoList /> {/* TodoList Component */}
       <LifeCoach /> {/* Life Coach Component */}
       <LabelManager /> {/* Label Management */}
       <InputBox onAddEntry={addTimeEntry} />
