@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TimeEntry } from "../types/timeEntry";
+import { getLabels } from "../services/labelService";
+import { Label } from "../types/label";
 
 interface TimeEntryProps {
   entry: TimeEntry;
@@ -11,8 +13,15 @@ interface TimeEntryProps {
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, onDelete, onEdit }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEntry, setEditedEntry] = useState(entry);
+  const [labels, setLabels] = useState<Label[]>([]);
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (isEditing) {
+      getLabels().then(setLabels);
+    }
+  }, [isEditing]);
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setEditedEntry({ ...editedEntry, [e.target.name]: e.target.value });
   };
 
@@ -40,7 +49,23 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, on
           <input type="text" name="startTime" value={editedEntry.startTime} onChange={handleEditChange} />
           <input type="text" name="endTime" value={editedEntry.endTime} onChange={handleEditChange} />
           <input type="text" name="activity" value={editedEntry.activity} onChange={handleEditChange} />
-          <input type="text" name="label" value={editedEntry.label} onChange={handleEditChange} />
+          <select name="label" value={editedEntry.label} onChange={handleEditChange}>
+            <option value="">Select label</option>
+            {/* Group labels by parentId */}
+            {labels.filter(l => !l.parentId).map(parent => (
+              <React.Fragment key={parent.id}>
+                <option value={parent.name} style={{ color: parent.color }}>
+                  {parent.name}
+                </option>
+                {/* Sub-labels */}
+                {labels.filter(l => l.parentId === parent.id).map(child => (
+                  <option key={child.id} value={child.name} style={{ color: child.color }}>
+                    &nbsp;&nbsp;{parent.name} | {child.name}
+                  </option>
+                ))}
+              </React.Fragment>
+            ))}
+          </select>
           <button onClick={handleSave} style={{ backgroundColor: "#34A853", color: "white", padding: "5px", border: "none", borderRadius: "3px", cursor: "pointer", marginTop: "5px" }}>
             Save
           </button>

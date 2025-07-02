@@ -6,6 +6,21 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 In the project directory, you can run:
 
+>nvm use 22
+if need to use newer version of Node js
+
+### `rm -rf build/`
+Clean old build
+
+### `npm run build`
+Rebuild
+
+### `firebase deploy --only hosting`
+Deploy
+>if firebase is missing
+Install the Firebase CLI globally (recommended):
+### `npm install -g firebase-tools`
+
 ### `npm start`
 
 Runs the app in the development mode.\

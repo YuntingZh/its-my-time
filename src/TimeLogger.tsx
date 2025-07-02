@@ -8,7 +8,9 @@ import InputBox from "./components/InputBox";
 import LabelManager from "./components/LabelManager";
 import LifeCoach from "./components/LifeCoach"; 
 import TodoList from "./components/TodoList";
+import Charts from "./components/Charts";
 import DailyCandyJar from "./components/DailyCandyJar";
+import ReviewBiWeeklyReport from "./components/ReviewBiWeeklyReport";
 import { getLabels } from "./services/labelService";
 import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
@@ -24,6 +26,9 @@ const openai = new OpenAI({
 const TimeLogger: React.FC = () => {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [labels, setLabels] = useState<Label[]>([]); // Store labels from Firestore
+  const [showChart, setShowChart] = useState(false); // Toggle between TodoList and Charts
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   // Fetch labels from Firestore
   const fetchLabels = async () => {
@@ -184,16 +189,82 @@ Return JSON ONLY in this format:
   }, []);
 
   return (
-    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
+    <div style={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>
       <h2>It's My Time 🙂</h2>
-      <p>Tracking time easily!</p>
-      <TimerTool /> {/* TimerTool Component */}
-      <TodoList /> {/* TodoList Component */}
-      <LifeCoach /> {/* Life Coach Component */}
-      <LabelManager /> {/* Label Management */}
-      <InputBox onAddEntry={addTimeEntry} />
-      <Timeline entries={timeEntries} getLabelColor={getLabelColor} onDelete={deleteEntry} onEdit={editEntry} />
-      <DailyCandyJar /> {/* DailyCandyJar Component */}
+
+      {/* ───────────────────────── Top Row ───────────────────────── */}
+      <div style={{ display: "flex", gap: "32px", alignItems: "flex-start", flexWrap: "wrap" }}>
+
+        {/* ░░ Left Container ░░ (InputBox above TodoList) */}
+        <div
+          style={{
+            flex: "1 1 600px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "24px",
+            minWidth: "300px",
+          }}
+        >
+          <InputBox onAddEntry={addTimeEntry} />
+          <TodoList />
+        </div>
+
+        {/* ░░ Right Container ░░ (Timeline / Chart Toggle) */}
+        <div style={{ flex: "1 1 350px", minWidth: "320px" }}>
+          {/* Date Selector shared by both views */}
+          <div style={{ textAlign: "center", marginBottom: 10 }}>
+            <label htmlFor="datePicker">📅 Select Date: </label>
+            <input
+              type="date"
+              id="datePicker"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{ padding: 5, borderRadius: 5, border: "1px solid #ccc", marginLeft: 5 }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <h2 style={{ margin: 0 }}>{showChart ? "📊 Daily Summary" : "🕒 Timeline"}</h2>
+            <button
+              onClick={() => setShowChart(!showChart)}
+              style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#5C67F2", color: "#fff", cursor: "pointer" }}
+            >
+              {showChart ? "Show Timeline" : "Show Pie Chart"}
+            </button>
+          </div>
+
+          {showChart ? (
+            <Charts
+              entries={timeEntries.filter((e) => e.date === selectedDate)}
+              getLabelColor={getLabelColor}
+            />
+          ) : (
+            <Timeline
+              entries={timeEntries}
+              getLabelColor={getLabelColor}
+              onDelete={deleteEntry}
+              onEdit={editEntry}
+              selectedDate={selectedDate}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ──────────────────────── Vertical Stack ───────────────────── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "32px", marginTop: "40px" }}>
+        {/* Row: Timer + Candy Jar */}
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: "1 1 300px", minWidth: "260px" }}>
+            <TimerTool />
+          </div>
+          <div style={{ flex: "1 1 300px", minWidth: "260px" }}>
+            <DailyCandyJar />
+          </div>
+        </div>
+
+        <LabelManager />
+        <LifeCoach />
+        <ReviewBiWeeklyReport timeEntries={timeEntries} labels={labels} />
+      </div>
     </div>
   );
 };

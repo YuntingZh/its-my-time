@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { TimeEntry } from "../types/timeEntry";
 import TimeEntryComponent from "./TimeEntry";
-import Charts from "./Charts";
 
 const baseLeft = 100; 
 
@@ -10,18 +9,24 @@ interface TimelineProps {
   getLabelColor: (labelName: string) => string;
   onDelete: (id: string) => void;
   onEdit: (entry: TimeEntry) => void;
+  selectedDate: string;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit }) => {
-  const today = new Date().toLocaleDateString("en-CA");
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [activeEntryId, setActiveEntryId] = useState<string | null>(null); // Track which entry is in front
-
-  // Filter entries for the selected date
-  const filteredEntries = entries.filter(entry => entry.date === selectedDate);
+const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit, selectedDate }) => {
+  const [activeEntryId, setActiveEntryId] = React.useState<string | null>(null);
   const timelineHeight = 1440;
   const minuteHeight = timelineHeight / 1440;
   const containerWidth = 600;
+
+  // Helper to format hour into 12-hour label
+  const formatHourLabel = (h: number) => {
+    const period = h < 12 ? "AM" : "PM";
+    const display = h % 12 === 0 ? 12 : h % 12;
+    return `${display} ${period}`;
+  };
+
+  // Filter entries for the selected date
+  const filteredEntries = entries.filter(entry => entry.date === selectedDate);
 
   // Convert AM/PM time to minutes from midnight
   const convertToMinutes = (timeStr: string): number => {
@@ -48,41 +53,19 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
   );
 
   return (
-    <div style={{ width: containerWidth, margin: "auto", position: "relative", padding: "20px" }}>
-      {/* Date Selector */}
-      <div style={{ textAlign: "center", marginBottom: "10px" }}>
-        <label htmlFor="datePicker">📅 Select Date: </label>
-        <input
-          type="date"
-          id="datePicker"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          style={{
-            padding: "5px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            marginLeft: "5px",
-          }}
-        />
-      </div>
-   {/* ✅ Pie Chart Added Below Date Selector */}
-   <div style={{ textAlign: "center", marginBottom: "20px" }}>
-   <Charts entries={filteredEntries} getLabelColor={getLabelColor} />      </div>
-      <h3>📊 Detailed Timeline for {formatDateToLocalString(selectedDate)}</h3>
+    <div style={{ width: '100%', margin: "auto", position: "relative", padding: "20px" }}>
       <div style={{ position: "relative", borderLeft: "4px solid #ddd", paddingLeft: "20px", height: timelineHeight + "px" }}>
         {/* Render Hourly Slots */}
         {Array.from({ length: 24 }).map((_, hour) => (
           <div
             key={hour}
-            style={{
-              position: "absolute",
-              top: hour * 60 * minuteHeight,
+            style={{              top: hour * 60 * minuteHeight,
               height: "60px",
               borderBottom: "1px solid #eee",
               width: "100%",
             }}
           >
-            <div style={{ position: "absolute", left: "-80px", fontWeight: "bold" }}>{hour}:00</div>
+            <div style={{ position: "absolute", left: "10px", fontWeight: "bold" }}>{formatHourLabel(hour)}</div>
           </div>
         ))}
 
@@ -111,8 +94,8 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
 
               {/* Time Entry Box with Click-to-Bring-to-Front */}
               <div
-onClick={() => setActiveEntryId(activeEntryId === entry.id ? null : entry.id || null)}
-style={{
+                onClick={() => setActiveEntryId(activeEntryId === entry.id ? null : entry.id || null)}
+                style={{
                   position: "absolute",
                   top: startTotalMins * minuteHeight,
                   left: `${baseLeft}px`,
