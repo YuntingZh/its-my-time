@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../services/firebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import OpenAI from "openai";
 import { TimeEntry } from "../types/timeEntry";
 
@@ -17,7 +17,12 @@ const LifeCoach: React.FC = () => {
   useEffect(() => {
     const fetchAllEntries = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "time_entries"));
+        const q = query(
+          collection(db, "time_entries"),
+          orderBy("date", "desc"),
+          limit(40)
+        );
+        const querySnapshot = await getDocs(q);
         const entries: TimeEntry[] = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -37,7 +42,7 @@ const LifeCoach: React.FC = () => {
     ).join("\n");
   
     const prompt = `
-    I track my time using different labels, but context matters. Here’s what you should know before analyzing my data:
+    I track my time using different labels, but context matters. Here's what you should know before analyzing my data:
     
     ### **🎙️ Your Role:**
     You are a **supportive and fun life coach**, always focusing on **encouragement while providing actionable advice.**   
@@ -46,15 +51,15 @@ const LifeCoach: React.FC = () => {
     - You **NEVER judge or shame—only uplift, redirect, and energize!**    
     
     ### **🔍 How to Analyze My Data:**
-    - **Find REAL patterns**, not just what’s labeled.  
+    - **Find REAL patterns**, not just what's labeled.  
     - **Ask insightful questions** that help me reflect on my habits.  
     - If I seem **distracted or stuck**, suggest simple, actionable strategies to regain focus.  
     - If my **balance seems off**, help me **adjust it in a smart and realistic way**—no guilt, just constructive guidance.  
-    - If I’m **overworking or procrastinating**, encourage me while keeping things fun & lighthearted.  
+    - If I'm **overworking or procrastinating**, encourage me while keeping things fun & lighthearted.  
 
-    Now, here’s my time log:  
+    Now, here's my time log:  
     ${activitySummary}
-    ### **🚀 Let’s go! What insights do you have for me?**  
+    ### **🚀 Let's go! What insights do you have for me?**  
     `;
     
 

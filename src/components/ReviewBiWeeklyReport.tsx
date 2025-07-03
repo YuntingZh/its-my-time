@@ -3,6 +3,7 @@ import { TimeEntry } from "../types/timeEntry";
 import { Label } from "../types/label";
 import OpenAI from "openai";
 import { getReport, saveReport, deleteReport } from "../services/reportService";
+import { getDiary } from "../services/diaryService";
 
 interface ReviewBiWeeklyReportProps {
   timeEntries: TimeEntry[];
@@ -110,9 +111,19 @@ const ReviewBiWeeklyReport: React.FC<ReviewBiWeeklyReportProps> = ({ timeEntries
     setLoadingIdx(globalIdx);
     try {
       // Build simple bullet list of activities aggregated by label/time
-      const bullet = entriesInRange.map(e => `• ${e.activity} (${e.startTime} - ${e.endTime})`).join("\n");
+      const bulletEntries = entriesInRange.map(e => `• ${e.activity} (${e.startTime} - ${e.endTime})`).join("\n");
+      // Diaries
+      const diariesLines: string[] = [];
+      let dIter = new Date(ranges[globalIdx].start);
+      while (dIter <= ranges[globalIdx].end) {
+        const ymd = dIter.toISOString().slice(0,10);
+        const diary = getDiary(ymd);
+        if (diary && diary.text.trim()) diariesLines.push(`Diary ${ymd}: ${diary.text.trim()}`);
+        dIter.setDate(dIter.getDate() + 1);
+      }
+      const diarySection = diariesLines.length ? `\n\nPersonal diary notes:\n${diariesLines.join("\n")}` : "";
 
-      const prompt = `You are a personal productivity coach. The following is a list of time-tracked activities for a two-week period.  Write a concise (5-7 sentences) summary that: 1) Describes what the person spent most of their time on, 2) Infers how they might have felt, 3) Points out any interesting patterns or imbalances, 4) Gives one actionable suggestion for the next two weeks.\n\nActivities:\n${bullet}`;
+      const prompt = `You are a personal productivity coach. The following is a list of time-tracked activities for a two-week period.  Write a concise (5-7 sentences) summary that: 1) Describes what the person spent most of their time on, 2) Infers how they might have felt, 3) Points out any interesting patterns or imbalances, 4) Gives one actionable suggestion for the next two weeks.\n\nActivities:\n${bulletEntries}${diarySection}`;
 
       const resp = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",

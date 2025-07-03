@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { db } from "./services/firebaseConfig"; 
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
-import OpenAI from "openai";
 import TimerTool from "./components/TimerTool";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
@@ -11,30 +8,37 @@ import TodoList from "./components/TodoList";
 import Charts from "./components/Charts";
 import DailyCandyJar from "./components/DailyCandyJar";
 import ReviewBiWeeklyReport from "./components/ReviewBiWeeklyReport";
-import { getLabels } from "./services/labelService";
-import { Label } from "./types/label";
 import { TimeEntry } from "./types/timeEntry";
-
-
-
-// Setup OpenAI API
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+import TimelineRecoveryModal from "./components/TimelineRecoveryModal";
+import { findGaps } from "./services/gapService";
+import { Gap } from "./types/gap";
+import { parseRecoveryText, parseEntryText } from "./services/aiParserService";
+import AboutMe from "./components/AboutMe";
+import useLabels from "./hooks/useLabels";
+import useTimeEntries from "./hooks/useTimeEntries";
+import TimeFixModal from "./components/TimeFixModal";
+import DailyDiary from "./components/DailyDiary";
+import CalendarMonthlyPicker from "./components/CalendarMonthlyPicker";
 
 const TimeLogger: React.FC = () => {
-  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
-  const [labels, setLabels] = useState<Label[]>([]); // Store labels from Firestore
+  const { labels } = useLabels();
+  const {
+    entries: timeEntries,
+    addEntry,
+    deleteEntry: removeEntry,
+    updateEntry: updateEntryFn,
+    refresh,
+  } = useTimeEntries();
   const [showChart, setShowChart] = useState(false); // Toggle between TodoList and Charts
   const todayStr = new Date().toLocaleDateString("en-CA");
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  // ───────── Recovery Assistant State ─────────
+  const [gapsToday, setGapsToday] = useState<Gap[]>([]);
+  const [showRecovery, setShowRecovery] = useState(false);
+  // ───────── About Me ─────────
+  const [aboutMe, setAboutMe] = useState<string>(localStorage.getItem("aboutMe") || "");
+  const [pendingFix, setPendingFix] = useState<Omit<TimeEntry, "id"> | null>(null);
 
-  // Fetch labels from Firestore
-  const fetchLabels = async () => {
-    const fetchedLabels = await getLabels();
-    setLabels(fetchedLabels);
-  };
   // Dynamically get label color when displaying labels
   const getLabelColor = (labelName: string) => {
   
@@ -45,148 +49,87 @@ const TimeLogger: React.FC = () => {
     return label ? label.color : "#9E9E9E"; // Default gray if not found
   };
   
-  // Fetch time entries from Firestore
-  const fetchEntries = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "time_entries"));
-      const entries: TimeEntry[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          activity: data.activity,
-          date: data.date,
-          label: data.label, // Store the label name (not color)
-        };
-      });
-      setTimeEntries(entries);
-    } catch (error) {
-      console.error("Error fetching entries:", error);
-    }
-  };
-
-
-  //  AI-powered input parsing
-  const parseInputWithAI = async (text: string) => {
-    //  Get all label names, including sub-labels
-    const labelNames = labels.map(label => {
-      if (label.parentId) {
-        // Find the parent label and explicitly link them
-        const parentLabel = labels.find(l => l.id === label.parentId);
-        return parentLabel ? `"${label.name}" (subcategory of "${parentLabel.name}")` : `"${label.name}"`;
-      }
-      return `"${label.name}"`; // For top-level labels
-    }).join(", ");    
-  
-    console.log("📌 AI Label Categories Sent to OpenAI:", labelNames); // Debugging Log
-  
-    const now = new Date();
-const currentTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-
-const prompt = `Extract the start time, end time, and activity from this text: "${text}".  
-Match it to one of these categories: [${labelNames}].  
-
-IMPORTANT:  
-- **If a subcategory exists, ALWAYS choose the most specific one** instead of the general category.  
-- **For example, "Coding" (subcategory of "Work") should be chosen instead of just "Work".**  
-- **"Call my loved ones" (subcategory of "Social") should be chosen instead of just "Social".**  
-
-Time Handling:  
-- If the user says **"now"**, return the current time as **"${currentTime}"**.  
-- If they say **"in X minutes/hours"**, add X to the current time and return in **"HH:MM AM/PM"** format.  
-- If they say **"later"**, assume 1 hour from now and return in **"HH:MM AM/PM"** format.  
-- If they say **"this afternoon"**, assume **3:00 PM**.  
-- If they say **"tonight"**, assume **8:00 PM**.  
-- **Never return words like "now + 10 minutes", always return actual time.**  
-
-Return JSON ONLY in this format:
-{"startTime": "HH:MM AM/PM", "endTime": "HH:MM AM/PM", "activity": "description", "label": "category"}.`;
-
-    
-    
-    try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "system", content: prompt }],
-        max_tokens: 50,
-      });
-  
-      console.log("🔥 AI Response:", response.choices[0].message?.content); // Debug AI output
-      const extracted = JSON.parse(response.choices[0].message?.content || "{}");
-  
-      // Ensure AI result matches a Firestore label
-      const labelExists = labels.some(label => label.name === extracted.label);
-      const finalLabel = labelExists ? extracted.label : "unknown";
-  
-      console.log("✅ Final Label Assigned:", finalLabel); // Debug Final Label
-  
-      return {
-        startTime: extracted.startTime || "00:00 AM",
-        endTime: extracted.endTime || "00:00 AM",
-        activity: extracted.activity || "Error Parsing",
-        label: finalLabel,
-      };
-    } catch (error) {
-      console.error("❌ AI Parsing Error:", error);
-      return { startTime: "00:00 AM", endTime: "00:00 AM", activity: "Error Parsing", label: "unknown" };
-    }
-  };
-  
-  
   // ➕ Add a new time entry
   const addTimeEntry = async (inputText: string) => {
     if (!inputText) return;
 
-    const { startTime, endTime, activity, label } = await parseInputWithAI(inputText);
-    const date = new Date().toLocaleDateString("en-CA"); 
+    let { startTime, endTime, activity, label } = await parseEntryText(inputText, labels, aboutMe);
+    startTime = formatTime(startTime);
+    endTime = formatTime(endTime);
+    const invalid =
+      !startTime || !endTime || label === "unknown" || toMinutes(startTime) >= toMinutes(endTime);
+    const date = new Date().toLocaleDateString("en-CA");
+
+    if (invalid) {
+      setPendingFix({ startTime, endTime, activity, label, date });
+      return;
+    }
 
     try {
-      await addDoc(collection(db, "time_entries"), { startTime, endTime, activity, label, date });
-      fetchEntries(); // Refresh list
+      await addEntry({ startTime, endTime, activity, label, date });
     } catch (error) {
       console.error("Error adding time entry:", error);
     }
   };
 
   // 🗑️ Delete an entry
-  const deleteEntry = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "time_entries", id));
-      setTimeEntries((prev) => prev.filter((entry) => entry.id !== id)); // Remove from state
-    } catch (error) {
-      console.error("Error deleting entry:", error);
-    }
-  };
+  const deleteEntry = removeEntry;
 
   // ✏️ Edit an existing entry
-  const editEntry = async (updatedEntry: TimeEntry) => {
+  const handleEditEntry = async (updatedEntry: TimeEntry) => {
     if (!updatedEntry.id) return;
     try {
-      await updateDoc(doc(db, "time_entries", updatedEntry.id), {
-        startTime: updatedEntry.startTime,
-        endTime: updatedEntry.endTime,
-        activity: updatedEntry.activity,
-        label: updatedEntry.label,
-      });
-
-      setTimeEntries((prev) =>
-        prev.map((entry) => (entry.id === updatedEntry.id ? updatedEntry : entry))
-      );
+      await updateEntryFn(updatedEntry);
     } catch (error) {
       console.error("Error updating entry:", error);
     }
   };
 
-  // ⏳ Load labels first, then fetch entries
+  // Re-compute gaps whenever today's entries change
   useEffect(() => {
-    const fetchData = async () => {
-      await fetchLabels(); // Load labels first
-      await fetchEntries(); // Then load entries
+    const gaps = findGaps(timeEntries, todayStr);
+    setGapsToday(gaps);
+  }, [timeEntries, todayStr]);
+
+  // Show the modal automatically at 21:00 if gaps exist and not previously skipped
+  useEffect(() => {
+    const storageKey = `skipRecovery-${todayStr}`;
+
+    const check = () => {
+      const now = new Date();
+      if (
+        now.getHours() === 21 &&
+        gapsToday.length > 0 &&
+        localStorage.getItem(storageKey) !== "true"
+      ) {
+        setShowRecovery(true);
+      }
     };
-    
-    fetchData();
-  }, []);
+
+    // Check every minute
+    const interval = setInterval(check, 60 * 1000);
+    check(); // also run immediately on mount
+
+    return () => clearInterval(interval);
+  }, [gapsToday, todayStr]);
+
+  const toMinutes = (t: string) => {
+    if (!t) return 0;
+    const [time, period] = t.split(" ");
+    const [h, m] = time.split(":").map(Number);
+    let hour = h;
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+    return hour * 60 + m;
+  };
+
+  const formatTime = (t: string) => {
+    const [time, period] = t.trim().split(" ");
+    if (!time || !period) return t;
+    let [h, m] = time.split(":");
+    if (h.length === 1) h = `0${h}`;
+    return `${h}:${m} ${period}`;
+  };
 
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>
@@ -207,21 +150,17 @@ Return JSON ONLY in this format:
         >
           <InputBox onAddEntry={addTimeEntry} />
           <TodoList />
+          <DailyDiary date={selectedDate}/>
         </div>
 
         {/* ░░ Right Container ░░ (Timeline / Chart Toggle) */}
         <div style={{ flex: "1 1 350px", minWidth: "320px" }}>
-          {/* Date Selector shared by both views */}
-          <div style={{ textAlign: "center", marginBottom: 10 }}>
-            <label htmlFor="datePicker">📅 Select Date: </label>
-            <input
-              type="date"
-              id="datePicker"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ padding: 5, borderRadius: 5, border: "1px solid #ccc", marginLeft: 5 }}
-            />
-          </div>
+          <CalendarMonthlyPicker
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            entries={timeEntries}
+          />
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <h2 style={{ margin: 0 }}>{showChart ? "📊 Daily Summary" : "🕒 Timeline"}</h2>
             <button
@@ -242,7 +181,7 @@ Return JSON ONLY in this format:
               entries={timeEntries}
               getLabelColor={getLabelColor}
               onDelete={deleteEntry}
-              onEdit={editEntry}
+              onEdit={handleEditEntry}
               selectedDate={selectedDate}
             />
           )}
@@ -264,7 +203,62 @@ Return JSON ONLY in this format:
         <LabelManager />
         <LifeCoach />
         <ReviewBiWeeklyReport timeEntries={timeEntries} labels={labels} />
+        <AboutMe aboutMe={aboutMe} setAboutMe={setAboutMe} />
       </div>
+
+      {/* ───────── Recovery Assistant Modal ───────── */}
+      {showRecovery && (
+        <TimelineRecoveryModal
+          gaps={gapsToday}
+          onClose={() => setShowRecovery(false)}
+          onSkipToday={() => {
+            localStorage.setItem(`skipRecovery-${todayStr}`, "true");
+            setShowRecovery(false);
+          }}
+          onRemindLater={() => setShowRecovery(false)}
+          onSave={async (raw) => {
+            if (!raw.length) {
+              setShowRecovery(false);
+              return;
+            }
+
+            // raw will contain one object with activity=freeText
+            const freeText = raw[0].activity || "";
+            const aiEntries = await parseRecoveryText(freeText, gapsToday, labels);
+
+            const date = todayStr;
+
+            // Persist each entry
+            for (const e of aiEntries) {
+              if (!e.startTime || !e.endTime || !e.activity) continue;
+              const label = e.label && labels.some((l) => l.name === e.label) ? e.label : "unknown";
+              try {
+                await addEntry({ startTime: e.startTime, endTime: e.endTime, activity: e.activity, label, date });
+              } catch (err) {
+                console.error("Failed saving recovery entry", err);
+              }
+            }
+
+            refresh();
+            setShowRecovery(false);
+          }}
+        />
+      )}
+
+      {pendingFix && (
+        <TimeFixModal
+          entry={pendingFix}
+          onCancel={() => setPendingFix(null)}
+          onSave={async (fixed) => {
+            try {
+              await addEntry(fixed);
+              setPendingFix(null);
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

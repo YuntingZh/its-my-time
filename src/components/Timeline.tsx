@@ -22,7 +22,7 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
   const formatHourLabel = (h: number) => {
     const period = h < 12 ? "AM" : "PM";
     const display = h % 12 === 0 ? 12 : h % 12;
-    return `${display} ${period}`;
+    return `${display} ç${period}`;
   };
 
   // Filter entries for the selected date
