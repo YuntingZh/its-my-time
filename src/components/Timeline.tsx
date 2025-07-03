@@ -10,9 +10,10 @@ interface TimelineProps {
   onDelete: (id: string) => void;
   onEdit: (entry: TimeEntry) => void;
   selectedDate: string;
+  fastingPlan?: { startHour: number; windowHours: number } | null;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit, selectedDate }) => {
+const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, onEdit, selectedDate, fastingPlan }) => {
   const [activeEntryId, setActiveEntryId] = React.useState<string | null>(null);
   const timelineHeight = 1440;
   const minuteHeight = timelineHeight / 1440;
@@ -52,6 +53,14 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
     (a, b) => convertToMinutes(a.startTime) - convertToMinutes(b.startTime)
   );
 
+  // fasting overlay positions
+  const fastingOverlay = fastingPlan
+    ? {
+        top: fastingPlan.startHour * 60 * minuteHeight,
+        height: fastingPlan.windowHours * 60 * minuteHeight,
+      }
+    : null;
+
   return (
     <div style={{ width: '100%', margin: "auto", position: "relative", padding: "20px" }}>
       <div style={{ position: "relative", borderLeft: "4px solid #ddd", paddingLeft: "20px", height: timelineHeight + "px" }}>
@@ -68,6 +77,23 @@ const Timeline: React.FC<TimelineProps> = ({ entries, getLabelColor, onDelete, o
             <div style={{ position: "absolute", left: "10px", fontWeight: "bold" }}>{formatHourLabel(hour)}</div>
           </div>
         ))}
+
+        {/* Fasting eating window */}
+        {fastingOverlay && (
+          <div
+            style={{
+              position: "absolute",
+              top: fastingOverlay.top,
+              left: 0,
+              height: fastingOverlay.height,
+              width: "100%",
+              background: "#D6BCFA",
+              opacity: 0.2,
+              pointerEvents: "none",
+              zIndex: 1,
+            }}
+          />
+        )}
 
         {/* Render Entries with Click-to-Bring-to-Front Feature */}
         {sortedEntries.map((entry, index) => {

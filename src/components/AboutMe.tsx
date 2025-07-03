@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { PencilSimple, FloppyDisk, PersonSimpleTaiChi } from "@phosphor-icons/react";
+import { getAboutMe, saveAboutMe } from "../services/aboutMeService";
 
 interface AboutMeProps {
   aboutMe: string;
@@ -7,18 +8,27 @@ interface AboutMeProps {
 }
 
 const AboutMe: React.FC<AboutMeProps> = ({ aboutMe, setAboutMe }) => {
-  const initialTs = localStorage.getItem("aboutMeUpdatedAt");
-  const [updatedAt, setUpdatedAt] = useState<string | null>(initialTs);
-  const [editing, setEditing] = useState<boolean>(!aboutMe);
-  const [collapsed, setCollapsed] = useState<boolean>(aboutMe !== "" && !editing);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [editing, setEditing] = useState<boolean>(false);
+  const [collapsed, setCollapsed] = useState<boolean>(true);
   const [draft, setDraft] = useState<string>(aboutMe);
 
-  const save = () => {
+  React.useEffect(() => {
+    (async () => {
+      const data = await getAboutMe();
+      setDraft(data.text);
+      setAboutMe(data.text);
+      setUpdatedAt(data.updatedAt);
+      setEditing(!data.text);
+      setCollapsed(!!data.text);
+    })();
+  }, []);
+
+  const save = async () => {
     setAboutMe(draft);
-    localStorage.setItem("aboutMe", draft);
+    await saveAboutMe(draft);
     const ts = new Date().toISOString();
     setUpdatedAt(ts);
-    localStorage.setItem("aboutMeUpdatedAt", ts);
     setEditing(false);
     setCollapsed(false);
   };
@@ -31,7 +41,7 @@ const AboutMe: React.FC<AboutMeProps> = ({ aboutMe, setAboutMe }) => {
       >
         <PersonSimpleTaiChi size={20} /> About Me
       </h3>
-      {updatedAt && !editing && !collapsed && (
+      {updatedAt && !editing && (
         <p style={{ fontSize: 12, color: "#666", marginTop: -8, marginBottom: 8 }}>
           Last updated: {new Date(updatedAt).toLocaleString()}
         </p>
@@ -58,7 +68,6 @@ const AboutMe: React.FC<AboutMeProps> = ({ aboutMe, setAboutMe }) => {
           <button
             onClick={() => {
               setEditing(true);
-              setCollapsed(false);
             }}
             style={{ position: "absolute", top: 8, right: 8, background: "transparent", border: "none", cursor: "pointer" }}
             aria-label="Edit About Me"

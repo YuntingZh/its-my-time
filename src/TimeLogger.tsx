@@ -19,6 +19,8 @@ import useTimeEntries from "./hooks/useTimeEntries";
 import TimeFixModal from "./components/TimeFixModal";
 import DailyDiary from "./components/DailyDiary";
 import CalendarMonthlyPicker from "./components/CalendarMonthlyPicker";
+import FastingWindowInput from "./components/FastingWindowInput";
+import { getFasting } from "./services/fastingService";
 
 const TimeLogger: React.FC = () => {
   const { labels } = useLabels();
@@ -38,6 +40,7 @@ const TimeLogger: React.FC = () => {
   // ───────── About Me ─────────
   const [aboutMe, setAboutMe] = useState<string>(localStorage.getItem("aboutMe") || "");
   const [pendingFix, setPendingFix] = useState<Omit<TimeEntry, "id"> | null>(null);
+  const [fastingPlan, setFastingPlan] = useState(() => getFasting(selectedDate));
 
   // Dynamically get label color when displaying labels
   const getLabelColor = (labelName: string) => {
@@ -113,6 +116,10 @@ const TimeLogger: React.FC = () => {
     return () => clearInterval(interval);
   }, [gapsToday, todayStr]);
 
+  useEffect(() => {
+    setFastingPlan(getFasting(selectedDate));
+  }, [selectedDate]);
+
   const toMinutes = (t: string) => {
     if (!t) return 0;
     const [time, period] = t.split(" ");
@@ -151,6 +158,7 @@ const TimeLogger: React.FC = () => {
           <InputBox onAddEntry={addTimeEntry} />
           <TodoList />
           <DailyDiary date={selectedDate}/>
+          <FastingWindowInput date={selectedDate} onSaved={() => setFastingPlan(getFasting(selectedDate))} />
         </div>
 
         {/* ░░ Right Container ░░ (Timeline / Chart Toggle) */}
@@ -183,6 +191,7 @@ const TimeLogger: React.FC = () => {
               onDelete={deleteEntry}
               onEdit={handleEditEntry}
               selectedDate={selectedDate}
+              fastingPlan={fastingPlan}
             />
           )}
         </div>

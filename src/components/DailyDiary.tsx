@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Notepad, PencilSimple, FloppyDisk } from "@phosphor-icons/react";
-import { getDiary, saveDiary } from "../services/diaryService";
+import React, { useState, useEffect } from "react";
+import { NotepadIcon, PencilSimpleIcon, FloppyDiskIcon } from "@phosphor-icons/react";
+import { getDiary, saveDiary, fetchDiary } from "../services/diaryService";
 
 interface Props {
   date: string; // YYYY-MM-DD
@@ -12,6 +12,18 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
   const [updatedAt, setUpdatedAt] = useState<string | null>(existing?.updatedAt || null);
   const [editing, setEditing] = useState<boolean>(!existing);
   const [collapsed, setCollapsed] = useState<boolean>(existing !== null);
+
+  useEffect(() => {
+    (async () => {
+      const remote = await fetchDiary(date);
+      if (remote && remote.text !== text) {
+        setText(remote.text);
+        setUpdatedAt(remote.updatedAt);
+        setEditing(false);
+        setCollapsed(true);
+      }
+    })();
+  }, [date]);
 
   const save = () => {
     saveDiary(date, text);
@@ -27,7 +39,7 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
         onClick={() => !editing && setCollapsed(!collapsed)}
         style={{ display: "flex", alignItems: "center", gap: 6, cursor: editing ? "default" : "pointer" }}
       >
-        <Notepad size={20} /> Diary ({date})
+        <NotepadIcon size={20} /> Diary ({date})
       </h3>
       {updatedAt && !editing && !collapsed && (
         <p style={{ fontSize: 12, color: "#666", marginTop: -8, marginBottom: 8 }}>
@@ -47,7 +59,7 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
             onClick={save}
             style={{ alignSelf: "flex-end", display: "flex", alignItems: "center", gap: 6, background: "#4CAF50", color: "#fff", border: "none", borderRadius: 4, padding: "6px 12px", cursor: "pointer" }}
           >
-            <FloppyDisk size={18} weight="fill" /> Save
+            <FloppyDiskIcon size={18} weight="fill" /> Save
           </button>
         </div>
       ) : (
@@ -57,7 +69,7 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
             onClick={() => { setEditing(true); setCollapsed(false); }}
             style={{ position: "absolute", top: 8, right: 8, background: "transparent", border: "none", cursor: "pointer" }}
           >
-            <PencilSimple size={20} />
+            <PencilSimpleIcon size={20} />
           </button>
         </div>
       ))}
