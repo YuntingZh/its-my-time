@@ -8,27 +8,33 @@ interface Props {
 
 const DailyDiary: React.FC<Props> = ({ date }) => {
   const existing = getDiary(date);
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const isToday = date === todayStr;
   const [text, setText] = useState<string>(existing?.text || "");
-  const [updatedAt, setUpdatedAt] = useState<string | null>(existing?.updatedAt || null);
-  const [editing, setEditing] = useState<boolean>(!existing);
+  const [editing, setEditing] = useState<boolean>(isToday && !existing);
   const [collapsed, setCollapsed] = useState<boolean>(existing !== null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const remote = await fetchDiary(date);
-      if (remote && remote.text !== text) {
+      if (cancelled) return;
+      if (remote) {
         setText(remote.text);
-        setUpdatedAt(remote.updatedAt);
         setEditing(false);
         setCollapsed(true);
+      } else {
+        const existingLocal = getDiary(date);
+        setText(existingLocal?.text || "");
+        setEditing(isToday && !existingLocal);
+        setCollapsed(existingLocal !== null);
       }
     })();
-  }, [date]);
+    return () => { cancelled = true; };
+  }, [date, isToday]);
 
   const save = () => {
     saveDiary(date, text);
-    const ts = new Date().toISOString();
-    setUpdatedAt(ts);
     setEditing(false);
     setCollapsed(false);
   };
@@ -41,11 +47,7 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
       >
         <NotepadIcon size={20} /> Diary ({date})
       </h3>
-      {updatedAt && !editing && !collapsed && (
-        <p style={{ fontSize: 12, color: "#666", marginTop: -8, marginBottom: 8 }}>
-          Last updated: {new Date(updatedAt).toLocaleString()}
-        </p>
-      )}
+  
       {!collapsed && (editing ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <textarea
@@ -64,13 +66,15 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
         </div>
       ) : (
         <div style={{ position: "relative" }}>
-          <p style={{ whiteSpace: "pre-wrap", background: "#F5F5F5", padding: 8, borderRadius: 4 }}>{text}</p>
-          <button
-            onClick={() => { setEditing(true); setCollapsed(false); }}
-            style={{ position: "absolute", top: 8, right: 8, background: "transparent", border: "none", cursor: "pointer" }}
-          >
-            <PencilSimpleIcon size={20} />
-          </button>
+          <p style={{ whiteSpace: "pre-wrap", background: "#F5F5F5", padding: 8, borderRadius: 4, minHeight: 40 }}>{text || (isToday ? "Click the pencil to start writing…" : "No diary entry for this date.")}</p>
+          {isToday && (
+            <button
+              onClick={() => { setEditing(true); setCollapsed(false); }}
+              style={{ position: "absolute", top: 8, right: 8, background: "transparent", border: "none", cursor: "pointer" }}
+            >
+              <PencilSimpleIcon size={20} />
+            </button>
+          )}
         </div>
       ))}
     </div>
