@@ -3,6 +3,7 @@ import { TimeEntry } from "../types/timeEntry";
 import { Label } from "../types/label";
 import OpenAI from "openai";
 import BiWeeklyDatePicker from "./BiWeeklyDatePicker";
+import TimeTrackingProgress from "./TimeTrackingProgress";
 import { getReport, saveReport, deleteReport } from "../services/reportService";
 import { getDiary } from "../services/diaryService";
 
@@ -189,6 +190,16 @@ const ReviewBiWeeklyReport: React.FC<ReviewBiWeeklyReportProps> = ({ timeEntries
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div style={{ width: "100%", maxWidth: 600, background: "#fff", border: "1px solid #eee", borderRadius: 12, boxShadow: "0 2px 8px #0001", padding: 20 }}>
             <h3 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>{selectedReport.title}</h3>
+
+            {/* 时间记录覆盖率 */}
+            <TimeTrackingProgress
+              entries={timeEntries.filter(e => {
+                const d = new Date(e.date);
+                return d >= ranges[selectedIndex].start && d <= ranges[selectedIndex].end;
+              })}
+              startDate={ranges[selectedIndex].start}
+              endDate={ranges[selectedIndex].end}
+            />
             
             {/* 时间统计 */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: 24 }}>
