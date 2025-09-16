@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../services/firebaseConfig";
+import TodoViewSwitcher from "./TodoViewSwitcher";
 import {
   collection,
   getDocs,
@@ -136,11 +137,8 @@ const TodoList: React.FC = () => {
   };
 
   return (
-    <div style={{ display: "flex", gap: "32px", alignItems: "flex-start" }}>
-
-      {/* Left: Regular Todo List */}
-      <div style={{ flex: 1, minWidth: "260px", maxWidth: "300px" }}>
-
+    <TodoViewSwitcher todos={todos} onUpdate={updateTodo}>
+      <div>
         {/* Header Row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ margin: 0 }}>To-do</h3>
@@ -304,10 +302,7 @@ const TodoList: React.FC = () => {
           })}
         </ul>
       </div>
-
-      {/* Right: QuadrantView */}
-      <QuadrantView todos={todos} onUpdate={updateTodo} />
-    </div>
+    </TodoViewSwitcher>
   );
 };
 

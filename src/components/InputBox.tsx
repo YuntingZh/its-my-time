@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import VoiceMemo from "./VoiceMemo";
+import '../styles/VoiceMemo.css';
 
 interface InputBoxProps {
   onAddEntry: (text: string) => void;
@@ -20,36 +21,25 @@ const InputBox: React.FC<InputBoxProps> = ({ onAddEntry }) => {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-        <input
-          type="text"
-          placeholder='Try typing or speaking "11-12am chilling, feeling happy"'
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          style={{
-            flex: 1,
-            padding: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ddd",
-          }}
-        />
+    <div style={{ padding: '10px' }}>
+      <div className="input-container">
+        <div className="input-group">
+          <input
+            type="text"
+            className="text-input"
+            placeholder='说说你在做什么...'
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+          />
+          <button
+            onClick={handleAddEntry}
+            className="add-button"
+          >
+            添加记录
+          </button>
+        </div>
         <VoiceMemo onTranscriptionComplete={handleVoiceTranscription} />
       </div>
-      <button
-        onClick={handleAddEntry}
-        style={{
-          padding: "10px 20px",
-          backgroundColor: "#4285F4",
-          color: "#fff",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-          width: "100%",
-        }}
-      >
-        Add Entry
-      </button>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Microphone, MicrophoneSlash } from '@phosphor-icons/react';
+import '../styles/VoiceMemo.css';
 import { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from '../types/webSpeech';
 
 interface VoiceMemoProps {
@@ -57,31 +58,26 @@ const VoiceMemo: React.FC<VoiceMemoProps> = ({ onTranscriptionComplete }) => {
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div className="voice-memo-container">
       <button
         onClick={isRecording ? stopRecording : startRecording}
-        style={{
-          padding: '10px',
-          borderRadius: '50%',
-          border: 'none',
-          backgroundColor: isRecording ? '#ff4444' : '#4285F4',
-          color: 'white',
-          cursor: 'pointer',
-          width: '40px',
-          height: '40px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        className={`voice-button ${isRecording ? 'recording' : 'not-recording'}`}
       >
-        {isRecording ? <MicrophoneSlash size={24} /> : <Microphone size={24} />}
+        {isRecording ? <MicrophoneSlash size={32} weight="bold" /> : <Microphone size={32} weight="bold" />}
       </button>
-      {isRecording && (
-        <span style={{ color: '#ff4444' }}>Recording...</span>
-      )}
-      {error && (
-        <span style={{ color: '#ff4444', fontSize: '14px' }}>{error}</span>
-      )}
+      <div className="status-container">
+        {isRecording && (
+          <div className="recording-status">
+            <div className="recording-indicator" />
+            正在录音...
+          </div>
+        )}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

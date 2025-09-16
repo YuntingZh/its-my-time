@@ -1,0 +1,141 @@
+.input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .input-container {
+    flex-direction: row;
+  }
+}
+
+.input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.text-input {
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-button {
+  padding: 15px;
+  background-color: #4285F4;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.voice-memo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .voice-memo-container {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.voice-button {
+  padding: 12px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  cursor: pointer;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.voice-button:active {
+  transform: scale(0.95);
+}
+
+.voice-button.recording {
+  background-color: #ff4444;
+}
+
+.voice-button.not-recording {
+  background-color: #4285F4;
+}
+
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (min-width: 768px) {
+  .status-container {
+    align-items: flex-start;
+  }
+}
+
+.recording-status {
+  color: #ff4444;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recording-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff4444;
+  animation: pulse 1s infinite;
+}
+
+.error-message {
+  color: #ff4444;
+  font-size: 14px;
+  padding: 8px 12px;
+  background-color: rgba(255,68,68,0.1);
+  border-radius: 8px;
+  max-width: 200px;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+}

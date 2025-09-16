@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { TimeEntry } from "../types/timeEntry";
 import { Label } from "../types/label";
 import OpenAI from "openai";
+import BiWeeklyDatePicker from "./BiWeeklyDatePicker";
 import { getReport, saveReport, deleteReport } from "../services/reportService";
 import { getDiary } from "../services/diaryService";
 
@@ -64,14 +65,19 @@ function sumMinutes(entries: TimeEntry[], labelNames: string[]) {
   }, 0);
 }
 
-const CARDS_PER_PAGE = 4;
-
 const ReviewBiWeeklyReport: React.FC<ReviewBiWeeklyReportProps> = ({ timeEntries, labels }) => {
-  const [page, setPage] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [insights, setInsights] = useState<Record<number, string>>({});
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
   const ranges = useMemo(() => getBiWeeklyRanges(timeEntries), [timeEntries]);
   const labelGroups = useMemo(() => getLabelGroups(labels), [labels]);
+
+  // 设置初始选中最近的一个双周期
+  useEffect(() => {
+    if (ranges.length > 0) {
+      setSelectedIndex(0);
+    }
+  }, [ranges]);
 
   // Fetch saved insights once
   React.useEffect(() => {
@@ -103,7 +109,8 @@ const ReviewBiWeeklyReport: React.FC<ReviewBiWeeklyReportProps> = ({ timeEntries
     };
   }), [ranges, timeEntries, labelGroups]);
 
-  const pagedReports = reports.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE);
+  // 只显示选中的报告
+  const selectedReport = reports[selectedIndex];
 
   // Handler to generate AI insight for a report index
   const handleGenerateInsight = async (globalIdx: number, entriesInRange: TimeEntry[]) => {
@@ -172,46 +179,97 @@ const ReviewBiWeeklyReport: React.FC<ReviewBiWeeklyReportProps> = ({ timeEntries
   return (
     <div style={{ marginTop: 32 }}>
       <h2 style={{ textAlign: "center" }}>📅 Review My Bi-Weekly Report</h2>
-      <div style={{ display: "flex", gap: 24, flexWrap: "wrap", justifyContent: "center" }}>
-        {pagedReports.map((report, idx) => {
-          const globalIdx = page * CARDS_PER_PAGE + idx;
-          return (
-            <div key={idx} style={{ minWidth: 260, maxWidth: 300, background: "#fff", border: "1px solid #eee", borderRadius: 12, boxShadow: "0 2px 8px #0001", padding: 20 }}>
-              <h3 style={{ margin: 0, marginBottom: 8, fontSize: 18 }}>{report.title}</h3>
-              {report.summary.map(s => (
-                <div key={s.label} style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 6, background: s.color, marginRight: 8 }}></span>
+      <BiWeeklyDatePicker
+        ranges={ranges}
+        selectedIndex={selectedIndex}
+        onSelect={setSelectedIndex}
+      />
+
+      {selectedReport && (
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div style={{ width: "100%", maxWidth: 600, background: "#fff", border: "1px solid #eee", borderRadius: 12, boxShadow: "0 2px 8px #0001", padding: 20 }}>
+            <h3 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>{selectedReport.title}</h3>
+            
+            {/* 时间统计 */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: 24 }}>
+              {selectedReport.summary.map(s => (
+                <div key={s.label} style={{ 
+                  display: "flex", 
+                  alignItems: "center",
+                  padding: "12px",
+                  backgroundColor: `${s.color}10`,
+                  borderRadius: "8px",
+                  border: `1px solid ${s.color}30`
+                }}>
+                  <span style={{ 
+                    display: "inline-block", 
+                    width: 12, 
+                    height: 12, 
+                    borderRadius: 6, 
+                    background: s.color, 
+                    marginRight: 8 
+                  }}></span>
                   <span style={{ flex: 1 }}>{s.label}</span>
                   <span style={{ fontWeight: 500 }}>{(s.minutes / 60).toFixed(1)}h</span>
                 </div>
               ))}
+            </div>
 
-              {/* AI Insight section */}
-              {insights[globalIdx] ? (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 14, whiteSpace: "pre-wrap", marginBottom: 8 }}>{insights[globalIdx]}</div>
-                  <button onClick={() => handleRemoveInsight(globalIdx)} style={{ fontSize: 12 }}>Remove Summary</button>
+            {/* AI 洞察 */}
+            <div style={{ marginTop: 24, borderTop: "1px solid #eee", paddingTop: 24 }}>
+              <h4 style={{ margin: 0, marginBottom: 16, fontSize: 16 }}>AI 洞察</h4>
+              {insights[selectedIndex] ? (
+                <div>
+                  <div style={{ 
+                    fontSize: 14, 
+                    lineHeight: 1.6,
+                    whiteSpace: "pre-wrap", 
+                    marginBottom: 16,
+                    padding: "16px",
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "8px"
+                  }}>
+                    {insights[selectedIndex]}
+                  </div>
+                  <button 
+                    onClick={() => handleRemoveInsight(selectedIndex)}
+                    style={{ 
+                      fontSize: 14,
+                      padding: "8px 16px",
+                      border: "1px solid #ff4444",
+                      borderRadius: "6px",
+                      background: "white",
+                      color: "#ff4444",
+                      cursor: "pointer"
+                    }}
+                  >
+                    删除总结
+                  </button>
                 </div>
               ) : (
                 <button
-                  onClick={() => handleGenerateInsight(globalIdx, timeEntries.filter(e => {
+                  onClick={() => handleGenerateInsight(selectedIndex, timeEntries.filter(e => {
                     const d = new Date(e.date);
-                    return d >= ranges[globalIdx].start && d <= ranges[globalIdx].end;
+                    return d >= ranges[selectedIndex].start && d <= ranges[selectedIndex].end;
                   }))}
                   disabled={loadingIdx !== null}
-                  style={{ marginTop: 12 }}
+                  style={{ 
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#5C67F2",
+                    color: "white",
+                    cursor: "pointer",
+                    width: "100%"
+                  }}
                 >
-                  {loadingIdx === globalIdx ? "Generating…" : "Generate AI Summary"}
+                  {loadingIdx === selectedIndex ? "生成中..." : "生成 AI 总结"}
                 </button>
               )}
             </div>
-          );
-        })}
-      </div>
-      <div style={{ textAlign: "center", marginTop: 16 }}>
-        <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} style={{ marginRight: 8 }}>Prev</button>
-        <button onClick={() => setPage(p => (p + 1 < Math.ceil(reports.length / CARDS_PER_PAGE) ? p + 1 : p))} disabled={page + 1 >= Math.ceil(reports.length / CARDS_PER_PAGE)}>Next</button>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
