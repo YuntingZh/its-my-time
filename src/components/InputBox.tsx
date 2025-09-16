@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import VoiceMemo from "./VoiceMemo";
 
 interface InputBoxProps {
   onAddEntry: (text: string) => void;
@@ -14,21 +15,27 @@ const InputBox: React.FC<InputBoxProps> = ({ onAddEntry }) => {
     }
   };
 
+  const handleVoiceTranscription = (text: string) => {
+    setInputText(text);
+  };
+
   return (
     <div>
-      <input
-        type="text"
-        placeholder='Try typing "11-12am chilling, doing nothing"'
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          marginBottom: "10px",
-          borderRadius: "5px",
-          border: "1px solid #ddd",
-        }}
-      />
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+        <input
+          type="text"
+          placeholder='Try typing or speaking "11-12am chilling, feeling happy"'
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ddd",
+          }}
+        />
+        <VoiceMemo onTranscriptionComplete={handleVoiceTranscription} />
+      </div>
       <button
         onClick={handleAddEntry}
         style={{
@@ -38,6 +45,7 @@ const InputBox: React.FC<InputBoxProps> = ({ onAddEntry }) => {
           border: "none",
           borderRadius: "5px",
           cursor: "pointer",
+          width: "100%",
         }}
       >
         Add Entry
