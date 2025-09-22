@@ -33,10 +33,14 @@ const DailyDiary: React.FC<Props> = ({ date }) => {
     return () => { cancelled = true; };
   }, [date, isToday]);
 
-  const save = () => {
-    saveDiary(date, text);
-    setEditing(false);
-    setCollapsed(false);
+  const save = async () => {
+    const saved = await saveDiary(date, text);
+    if (saved) {
+      setEditing(false);
+      setCollapsed(false);
+    } else {
+      alert("Failed to save diary entry. Please try again.");
+    }
   };
 
   return (

@@ -34,6 +34,6 @@ export async function updateTimeEntry(entry: TimeEntry) {
     endTime: entry.endTime,
     activity: entry.activity,
     label: entry.label,
-    mood: entry.mood,
+    date: entry.date
   });
 } 

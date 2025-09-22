@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { TimeEntry } from "../types/timeEntry";
 import { getLabels } from "../services/labelService";
 import { Label } from "../types/label";
+import { sanitizeTime, isValidTime } from "../utils/timeUtils";
 
 interface TimeEntryProps {
   entry: TimeEntry;
@@ -21,13 +22,53 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, on
     }
   }, [isEditing]);
 
+  const [error, setError] = useState("");
+
+  // Handle normal input changes
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setEditedEntry({ ...editedEntry, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setEditedEntry({ ...editedEntry, [name]: value });
   };
 
-  const handleSave = () => {
-    onEdit(editedEntry);
-    setIsEditing(false);
+  // Handle time input blur - format time when user finishes typing
+  const handleTimeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (!value) {
+      setError("");
+      return;
+    }
+    
+    try {
+      const formattedTime = sanitizeTime(value);
+      setEditedEntry(prev => ({ ...prev, [name]: formattedTime }));
+      setError("");
+    } catch {
+      setError("Invalid time format");
+    }
+  };
+
+  const handleSave = async () => {
+    if (!editedEntry.startTime || !editedEntry.endTime || 
+        !isValidTime(editedEntry.startTime) || !isValidTime(editedEntry.endTime)) {
+      setError("Please enter valid times");
+      return;
+    }
+    
+    try {
+      // Ensure times are in standard format before saving
+      const updatedEntry = {
+        ...editedEntry,
+        startTime: sanitizeTime(editedEntry.startTime),
+        endTime: sanitizeTime(editedEntry.endTime)
+      };
+      
+      await onEdit(updatedEntry);
+      setIsEditing(false);
+      setError("");
+    } catch (err) {
+      console.error("Failed to save entry:", err);
+      setError("Failed to save changes. Please try again.");
+    }
   };
 
   return (
@@ -46,9 +87,42 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, on
     >
       {isEditing ? (
         <>
-          <input type="text" name="startTime" value={editedEntry.startTime} onChange={handleEditChange} />
-          <input type="text" name="endTime" value={editedEntry.endTime} onChange={handleEditChange} />
-          <input type="text" name="activity" value={editedEntry.activity} onChange={handleEditChange} />
+          <input 
+            type="text" 
+            name="startTime" 
+            value={editedEntry.startTime} 
+            onChange={handleEditChange}
+            onBlur={handleTimeBlur}
+            placeholder="e.g. 9:00 AM, 9am, 0900"
+            style={{ 
+              marginBottom: "5px",
+              padding: "4px",
+              border: "1px solid " + (error ? "#ff6b6b" : "#ccc"),
+              borderRadius: "3px"
+            }}
+          />
+          <input 
+            type="text" 
+            name="endTime" 
+            value={editedEntry.endTime} 
+            onChange={handleEditChange}
+            onBlur={handleTimeBlur}
+            placeholder="e.g. 5:00 PM, 5pm, 1700"
+            style={{ 
+              marginBottom: "5px",
+              padding: "4px",
+              border: "1px solid " + (error ? "#ff6b6b" : "#ccc"),
+              borderRadius: "3px"
+            }}
+          />
+          <input 
+            type="text" 
+            name="activity" 
+            value={editedEntry.activity} 
+            onChange={handleEditChange}
+            style={{ marginBottom: "5px" }}
+          />
+          {error && <div style={{ color: "#FFD700", fontSize: "0.9em", marginBottom: "5px" }}>{error}</div>}
           <select name="label" value={editedEntry.label} onChange={handleEditChange}>
             <option value="">Select label</option>
             {/* Group labels by parentId */}
@@ -66,7 +140,20 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, getLabelColor, on
               </React.Fragment>
             ))}
           </select>
-          <button onClick={handleSave} style={{ backgroundColor: "#34A853", color: "white", padding: "5px", border: "none", borderRadius: "3px", cursor: "pointer", marginTop: "5px" }}>
+          <button 
+            onClick={handleSave} 
+            style={{ 
+              backgroundColor: "#34A853", 
+              color: "white", 
+              padding: "5px", 
+              border: "none", 
+              borderRadius: "3px", 
+              cursor: "pointer", 
+              marginTop: "5px",
+              opacity: error ? 0.7 : 1 
+            }}
+            disabled={!!error}
+          >
             Save
           </button>
         </>

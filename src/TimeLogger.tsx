@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { sanitizeTime, timeToMinutes } from "./utils/timeUtils";
 import TimerTool from "./components/TimerTool";
 import Timeline from "./components/Timeline";
 import InputBox from "./components/InputBox";
@@ -57,10 +58,10 @@ const TimeLogger: React.FC = () => {
     if (!inputText) return;
 
     let { startTime, endTime, activity, label } = await parseEntryText(inputText, labels, aboutMe);
-    startTime = formatTime(startTime);
-    endTime = formatTime(endTime);
+    startTime = sanitizeTime(startTime);
+    endTime = sanitizeTime(endTime);
     const invalid =
-      !startTime || !endTime || label === "unknown" || toMinutes(startTime) >= toMinutes(endTime);
+      !startTime || !endTime || label === "unknown" || timeToMinutes(startTime) >= timeToMinutes(endTime);
     const date = new Date().toLocaleDateString("en-CA");
 
     if (invalid) {
@@ -119,24 +120,6 @@ const TimeLogger: React.FC = () => {
   useEffect(() => {
     setFastingPlan(getFasting(selectedDate));
   }, [selectedDate]);
-
-  const toMinutes = (t: string) => {
-    if (!t) return 0;
-    const [time, period] = t.split(" ");
-    const [h, m] = time.split(":").map(Number);
-    let hour = h;
-    if (period === "PM" && hour !== 12) hour += 12;
-    if (period === "AM" && hour === 12) hour = 0;
-    return hour * 60 + m;
-  };
-
-  const formatTime = (t: string) => {
-    const [time, period] = t.trim().split(" ");
-    if (!time || !period) return t;
-    let [h, m] = time.split(":");
-    if (h.length === 1) h = `0${h}`;
-    return `${h}:${m} ${period}`;
-  };
 
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "auto" }}>

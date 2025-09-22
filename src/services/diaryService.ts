@@ -10,11 +10,17 @@ function diaryDoc(date: string) {
   return doc(db, "diaries", date);
 }
 
-export async function saveDiary(date: string, text: string) {  // Firestore
+export async function saveDiary(date: string, text: string) {
+  // Save to Firestore first
   try {
     await setDoc(diaryDoc(date), { text });
-  } catch {}
-  localStorage.setItem(`diary-${date}`, text);
+    // Only update local storage if Firestore save succeeds
+    localStorage.setItem(`diary-${date}`, text);
+    return true;
+  } catch (error) {
+    console.error("Failed to save diary:", error);
+    return false;
+  }
 }
 
 export function getDiary(date: string): Diary | null {
